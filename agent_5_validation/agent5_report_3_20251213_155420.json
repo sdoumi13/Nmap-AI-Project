@@ -1,0 +1,29 @@
+{
+  "intent": "Comprehensive security scan",
+  "original_command": "nmap -sV -O -p- TARGET",
+  "target": "192.168.188.1",
+  "agent": "hard-diffusion",
+  "timestamp": "2025-12-13T15:54:20.960277",
+  "stages": {
+    "validation": {
+      "status": "invalid",
+      "score": 30.0,
+      "method": "hybrid (semantic + mistral)",
+      "errors": [
+        "-O requires root privileges (add 'sudo' or use alternative)",
+        "LLM: API error: 400"
+      ],
+      "warnings": [
+        "Reasoning: API error: 400"
+      ]
+    },
+    "self_correction": {
+      "applied": false,
+      "reason": "invalid"
+    },
+    "sandbox": {
+      "skipped": true
+    }
+  },
+  "final_status": "failed_validation"
+}

@@ -1,0 +1,30 @@
+{
+  "intent": "Comprehensive security scan",
+  "original_command": "nmap -sV -O -p- TARGET",
+  "target": "192.168.188.1",
+  "agent": "hard-diffusion",
+  "timestamp": "2025-12-13T16:00:20.420511",
+  "stages": {
+    "validation": {
+      "status": "invalid",
+      "score": 48.0,
+      "method": "hybrid (semantic + mistral)",
+      "errors": [
+        "-O requires root privileges (add 'sudo' or use alternative)",
+        "LLM: The provided Nmap command lacks the necessary privileges to run the -O option (OS detection). This requires root access. To resolve this issue, use 'sudo' before the command."
+      ],
+      "warnings": [
+        "LLM: 'nmap sudo nmap -sV -O -p- TARGET'",
+        "Reasoning: The provided Nmap command lacks the necessary privileges to run the -O option (OS detection). This requires root access. To resolve this issue, use 'sudo' before the command."
+      ]
+    },
+    "self_correction": {
+      "applied": false,
+      "reason": "invalid"
+    },
+    "sandbox": {
+      "skipped": true
+    }
+  },
+  "final_status": "failed_validation"
+}

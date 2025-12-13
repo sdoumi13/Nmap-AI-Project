@@ -10,7 +10,7 @@ from pathlib import Path
 from datetime import datetime
 
 # Import tous les composants
-from validation.hybrid_validator import HybridValidator, ValidationStatus
+from validation.hybrid_validator import AdvancedHybridValidator, ValidationStatus
 from mcp_wrapper.server import MCPServer
 from mcp_wrapper.client import MCPClient
 from execution.sandbox_executor import SandboxExecutor
@@ -27,12 +27,12 @@ class Agent5Pipeline:
             self.config = yaml.safe_load(f)
         
         # Initialize components
-        print("⛄ Initializing Agent 5 components...")
+        print("⛄SalamouAlaykom Initializing Agent 5 components...")
         
         # 1. Validator
-        print("  [1/5] Hybrid Validator...")
-        self.validator = HybridValidator(
-            use_llm=self.config['validation']['use_llm_fallback']
+        print("  [1/5] Advanced Hybrid Validator...")
+        self.validator = AdvancedHybridValidator(
+            mistral_api_url="http://192.168.11.1:1234/v1/chat/completions"
         )
         
         # 2. MCP Server/Client
@@ -55,7 +55,7 @@ class Agent5Pipeline:
             max_retries=self.config['validation']['max_retries']
         )
         
-        print("✅ All components initialized!\n")
+        print(" All components initialized!\n")
     
     async def process(
         self, 
@@ -176,12 +176,12 @@ class Agent5Pipeline:
             )
             
             if sandbox_result['success']:
-                print(f"  ✅ Sandbox test PASSED")
+                print(f"  ^_^ Sandbox test PASSED")
                 print(f"  Execution time: {sandbox_result['time']:.2f}s")
                 print(f"  Output preview:")
                 print(f"    {sandbox_result['output'][:200]}...")
             else:
-                print(f"  ❌ Sandbox test FAILED")
+                print(f"  :| Sandbox test FAILED")
                 print(f"  Errors: {sandbox_result['errors']}")
             
             report['stages']['sandbox'] = sandbox_result
@@ -194,7 +194,7 @@ class Agent5Pipeline:
         else:
             print("\n[STAGE 3/4] SANDBOX TEST")
             print("-"*70)
-            print("  ⏭️  Skipped (validation failed)")
+            print("  ⏭  Skipped (validation failed)")
             
             report['stages']['sandbox'] = {"skipped": True}
             report['final_status'] = 'failed_validation'
@@ -214,11 +214,11 @@ class Agent5Pipeline:
                 vm_result = vm.execute(command=command, target=target)
             
             if vm_result['success']:
-                print(f"  ✅ VM execution SUCCESSFUL")
+                print(f"  ^_^ VM execution SUCCESSFUL")
                 print(f"  Exit code: {vm_result['exit_code']}")
                 print(f"  Output saved to report")
             else:
-                print(f"  ❌ VM execution FAILED")
+                print(f"  :| VM execution FAILED")
                 print(f"  Exit code: {vm_result['exit_code']}")
                 print(f"  Errors: {vm_result['errors']}")
             
@@ -226,7 +226,7 @@ class Agent5Pipeline:
             report['final_status'] = 'success' if vm_result['success'] else 'failed_vm'
         
         except Exception as e:
-            print(f"  ❌ VM connection error: {e}")
+            print(f" :| VM connection error: {e}")
             report['stages']['vm_execution'] = {
                 "success": False,
                 "errors": [str(e)]
@@ -244,11 +244,11 @@ class Agent5Pipeline:
         print(f"Validation Score: {report['stages']['validation']['score']}/100")
         
         if report.get('stages', {}).get('vm_execution', {}).get('success'):
-            print("\n✅ Pipeline completed successfully!")
+            print("\n :] Pipeline completed successfully!")
             print(f"\nNmap Output:\n{'-'*70}")
             print(report['stages']['vm_execution']['output'])
         else:
-            print("\n❌ Pipeline failed at some stage")
+            print("\n :\\ Pipeline failed at some stage")
             print("Check report for details")
         
         return report
@@ -343,13 +343,13 @@ if __name__ == "__main__":
         asyncio.run(main())
         
     except FileNotFoundError as fnf:
-        print(f"\n❌ FILE ERROR: {fnf}")
+        print(f"\n FILE ERROR: {fnf}")
         print("-> Please create agent5_config.yaml")
     except ImportError as imp:
-        print(f"\n❌ IMPORT ERROR: {imp}")
+        print(f"\n IMPORT ERROR: {imp}")
         print("-> Check that your subfolders (validation, mcp, etc.) exist and contain __init__.py")
     except Exception as e:
-        print(f"\n❌ UNEXPECTED ERROR: {e}")
+        print(f"\n UNEXPECTED ERROR: {e}")
         import traceback
         traceback.print_exc()
     

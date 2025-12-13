@@ -1,0 +1,28 @@
+{
+  "intent": "Scan web ports",
+  "original_command": "nmap -sT -p 80,443 TARGET",
+  "target": "scanme.nmap.org",
+  "agent": "easy-rag",
+  "timestamp": "2025-12-13T15:54:10.897058",
+  "stages": {
+    "validation": {
+      "status": "invalid",
+      "score": 40.0,
+      "method": "hybrid (semantic + mistral)",
+      "errors": [
+        "LLM: API error: 400"
+      ],
+      "warnings": [
+        "Reasoning: API error: 400"
+      ]
+    },
+    "self_correction": {
+      "applied": false,
+      "reason": "invalid"
+    },
+    "sandbox": {
+      "skipped": true
+    }
+  },
+  "final_status": "failed_validation"
+}

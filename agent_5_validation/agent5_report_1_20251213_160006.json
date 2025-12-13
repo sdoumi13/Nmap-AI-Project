@@ -1,0 +1,33 @@
+{
+  "intent": "Scan web ports",
+  "original_command": "nmap -sT -p 80,443 TARGET",
+  "target": "scanme.nmap.org",
+  "agent": "easy-rag",
+  "timestamp": "2025-12-13T15:59:50.779446",
+  "stages": {
+    "validation": {
+      "status": "valid",
+      "score": 100.0,
+      "method": "hybrid (semantic + mistral)",
+      "errors": [],
+      "warnings": []
+    },
+    "self_correction": {
+      "applied": false,
+      "reason": "validation passed"
+    },
+    "sandbox": {
+      "success": true,
+      "output": "Starting Nmap 7.98 ( https://nmap.org ) at 2025-12-13 14:59 +0000\nFailed to resolve \"nmap\".\nNmap scan report for blissful_perlman.nmap-sandbox (172.18.0.2)\nHost is up (0.000050s latency).\n\nPORT    STATE  SERVICE\n80/tcp  open   http\n443/tcp closed https\nMAC Address: 72:3C:37:B4:40:AE (Unknown)\n\nNmap done: 1 IP address (1 host up) scanned in 6.37 seconds\n",
+      "errors": [],
+      "time": 6.37
+    },
+    "vm_execution": {
+      "success": true,
+      "output": "Starting Nmap 7.80 ( https://nmap.org ) at 2025-12-13 16:00 +01\nNmap scan report for scanme.nmap.org (45.33.32.156)\nHost is up (0.19s latency).\nOther addresses for scanme.nmap.org (not scanned): 2600:3c01::f03c:91ff:fe18:bb2f\n\nPORT    STATE    SERVICE\n80/tcp  open     http\n443/tcp filtered https\n\nNmap done: 1 IP address (1 host up) scanned in 3.03 seconds\n",
+      "errors": [],
+      "exit_code": 0
+    }
+  },
+  "final_status": "success"
+}

@@ -1,0 +1,29 @@
+{
+  "intent": "Stealth scan web ports",
+  "original_command": "nmap -sS -p 80,443 TARGET",
+  "target": "192.168.188.1",
+  "agent": "medium-t5",
+  "timestamp": "2025-12-13T15:54:15.925941",
+  "stages": {
+    "validation": {
+      "status": "invalid",
+      "score": 30.0,
+      "method": "hybrid (semantic + mistral)",
+      "errors": [
+        "-sS requires root privileges (add 'sudo' or use alternative)",
+        "LLM: API error: 400"
+      ],
+      "warnings": [
+        "Reasoning: API error: 400"
+      ]
+    },
+    "self_correction": {
+      "applied": false,
+      "reason": "invalid"
+    },
+    "sandbox": {
+      "skipped": true
+    }
+  },
+  "final_status": "failed_validation"
+}

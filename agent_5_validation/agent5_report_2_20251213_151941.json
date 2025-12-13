@@ -1,0 +1,37 @@
+{
+  "intent": "Stealth scan web ports",
+  "original_command": "nmap -sS -p 80,443 TARGET",
+  "target": "192.168.188.1",
+  "agent": "medium-t5",
+  "timestamp": "2025-12-13T15:19:32.101120",
+  "stages": {
+    "validation": {
+      "status": "valid",
+      "score": 80.0,
+      "method": "semantic",
+      "errors": [
+        "-sS requires root privileges"
+      ],
+      "warnings": []
+    },
+    "self_correction": {
+      "applied": false,
+      "reason": "validation passed"
+    },
+    "sandbox": {
+      "success": true,
+      "output": "Starting Nmap 7.98 ( https://nmap.org ) at 2025-12-13 14:19 +0000\nFailed to resolve \"nmap\".\nNmap scan report for blissful_dijkstra.nmap-sandbox (172.18.0.2)\nHost is up (0.000063s latency).\n\nPORT    STATE  SERVICE\n80/tcp  open   http\n443/tcp closed https\nMAC Address: 02:63:F3:41:C5:7C (Unknown)\n\nNmap done: 1 IP address (1 host up) scanned in 6.46 seconds\n",
+      "errors": [],
+      "time": 6.46
+    },
+    "vm_execution": {
+      "success": false,
+      "output": "",
+      "errors": [
+        "You requested a scan type which requires root privileges.\nQUITTING!\n"
+      ],
+      "exit_code": 1
+    }
+  },
+  "final_status": "failed_vm"
+}

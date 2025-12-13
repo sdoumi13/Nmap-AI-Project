@@ -1,0 +1,30 @@
+{
+  "intent": "Stealth scan web ports",
+  "original_command": "nmap -sS -p 80,443 TARGET",
+  "target": "192.168.188.1",
+  "agent": "medium-t5",
+  "timestamp": "2025-12-13T16:00:11.754903",
+  "stages": {
+    "validation": {
+      "status": "invalid",
+      "score": 48.0,
+      "method": "hybrid (semantic + mistral)",
+      "errors": [
+        "-sS requires root privileges (add 'sudo' or use alternative)",
+        "LLM: The provided command is missing the necessary 'sudo' or alternative method to run as root due to the '-sS' option requirement."
+      ],
+      "warnings": [
+        "LLM: Add 'sudo' before the command or use another stealth scan technique that doesn't require root privileges, such as '-sA' (Anonymous scan) for web ports.",
+        "Reasoning: The provided command is missing the necessary 'sudo' or alternative method to run as root due to the '-sS' option requirement."
+      ]
+    },
+    "self_correction": {
+      "applied": false,
+      "reason": "invalid"
+    },
+    "sandbox": {
+      "skipped": true
+    }
+  },
+  "final_status": "failed_validation"
+}

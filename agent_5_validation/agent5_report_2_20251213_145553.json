@@ -1,0 +1,37 @@
+{
+  "intent": "Stealth scan web ports",
+  "original_command": "nmap -sS -p 80,443 TARGET",
+  "target": "192.168.188.1",
+  "agent": "medium-t5",
+  "timestamp": "2025-12-13T14:55:44.409758",
+  "stages": {
+    "validation": {
+      "status": "valid",
+      "score": 90.0,
+      "method": "semantic",
+      "errors": [
+        "-sS requires root privileges"
+      ],
+      "warnings": []
+    },
+    "self_correction": {
+      "applied": false,
+      "reason": "validation passed"
+    },
+    "sandbox": {
+      "success": true,
+      "output": "Starting Nmap 7.98 ( https://nmap.org ) at 2025-12-13 13:55 +0000\nFailed to resolve \"nmap\".\nNmap scan report for trusting_elbakyan.nmap-sandbox (172.18.0.2)\nHost is up (0.000063s latency).\n\nPORT    STATE  SERVICE\n80/tcp  open   http\n443/tcp closed https\nMAC Address: 42:0B:F7:7F:C5:FA (Unknown)\n\nNmap done: 1 IP address (1 host up) scanned in 3.95 seconds\n",
+      "errors": [],
+      "time": 3.95
+    },
+    "vm_execution": {
+      "success": false,
+      "output": "",
+      "errors": [
+        "You requested a scan type which requires root privileges.\nQUITTING!\n"
+      ],
+      "exit_code": 1
+    }
+  },
+  "final_status": "failed_vm"
+}
