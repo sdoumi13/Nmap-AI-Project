@@ -2,7 +2,6 @@
 import sys
 import os
 
-# Ajout du path pour les imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from agent_1_router.comprehension import ComprehensionAgent
@@ -15,7 +14,6 @@ def main():
     print("="*70)
 
     try:
-        # On instancie sans arguments, les classes gèrent les chemins
         comp_agent = ComprehensionAgent()
         complex_agent = ComplexityAgent()
         print("\n✅ SYSTÈME PRÊT.\n")
@@ -49,8 +47,6 @@ def main():
 
             # 2. Complexité
             routing = complex_agent.classify(user_query)
-            
-            # Couleurs pour le terminal
             color = '\033[92m' if routing['level'] == 'Easy' else '\033[93m' if routing['level'] == 'Medium' else '\033[91m'
             reset = '\033[0m'
             

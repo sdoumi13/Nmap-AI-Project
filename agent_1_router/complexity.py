@@ -18,13 +18,10 @@ class ComplexityAgent:
         
         print(f"   📂 Corpus Fine-tuning: {self.finetuning_path}")
         print(f"   📂 Corpus Diffusion:   {self.diffusion_path}")
-
-        # Mots-clés par défaut (Base solide)
         self.hard_keywords = ["script", "nse", "vuln", "exploit", "evade", "bypass", "ipv6", "fragment", "decoy", "spoof"]
         self.medium_keywords = ["os", "version", "service", "udp", "syn", "stealth", "aggressive", "fingerprint", "timing"]
         self.easy_keywords = ["scan", "port", "ping", "check", "host", "find", "discovery"]
-        
-        # Chargement dynamique
+
         self.load_finetuning_patterns()
         self.load_diffusion_patterns()
         
@@ -38,7 +35,6 @@ class ComplexityAgent:
             
             count = 0
             for conv in data.get('conversations', []):
-                # Si la conversation est marquée 'hard', on apprend ses mots clés
                 if conv.get('difficulty') == 'hard':
                     messages = conv.get('turns', conv.get('messages', []))
                     for msg in messages:
@@ -59,19 +55,14 @@ class ComplexityAgent:
                 data = json.load(f)
             
             count = 0
-            # On regarde les données d'entraînement pour le modèle de diffusion
             for item in data.get('training_data', []):
                 complexity = item.get('complexity_level', 1)
-                
-                # Si la complexité est élevée (> 6), c'est du HARD
                 if complexity > 6:
-                    # On ajoute les tags sémantiques aux mots-clés Hard
                     for tag in item.get('semantic_tags', []):
                         if tag.lower() not in self.hard_keywords:
                             self.hard_keywords.append(tag.lower())
                             count += 1
                     
-                    # On scanne aussi la description
                     self._extract_keywords(item.get('text_description', ''), self.hard_keywords)
 
             print(f"   📚 Appris de {count} tags complexes du corpus Diffusion.")
@@ -91,7 +82,6 @@ class ComplexityAgent:
     def classify(self, query: str) -> dict:
         q = query.lower()
         
-        # Comptage des correspondances
         hard_matches = sum(1 for w in self.hard_keywords if w in q)
         medium_matches = sum(1 for w in self.medium_keywords if w in q)
         

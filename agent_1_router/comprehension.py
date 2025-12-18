@@ -37,7 +37,7 @@ class ComprehensionAgent:
             max_features=1000, 
             ngram_range=(1, 2), 
             min_df=1,
-            stop_words='english' # Ignore "I", "want", "to"...
+            stop_words='english' 
         )
         self.tfidf_matrix = self.tfidf_vectorizer.fit_transform(self.all_corpus)
         self.n_nmap = len(self.nmap_corpus)
@@ -45,8 +45,7 @@ class ComprehensionAgent:
         # 4. Embeddings Sémantiques (CORRIGÉ POUR INCLURE AUTH/EXPLOIT)
         print("   Chargement du modèle d'embeddings...")
         self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
-        
-        # Phrase de référence enrichie pour couvrir l'authentification et l'exploitation
+
         self.reference_embedding = self.embedding_model.encode(
             "perform network scanning port enumeration service detection vulnerability assessment firewall evasion nse scripting host discovery brute force authentication exploitation password cracking", 
             convert_to_tensor=True
@@ -69,15 +68,13 @@ class ComprehensionAgent:
             self.corpus_metadata = []
             
             for doc in documents:
-                # --- CORRECTION ICI : ON LIT TOUT ---
-                # On ajoute use_cases, alternatives, et related_concepts au corpus
                 text_parts = [
                     doc.get('intent', ''),
                     doc.get('context', ''),
                     doc.get('explanation', ''),
                     ' '.join(doc.get('tags', [])),
-                    ' '.join(doc.get('use_cases', [])),       # <--- AJOUTÉ
-                    ' '.join(doc.get('related_concepts', [])) # <--- AJOUTÉ
+                    ' '.join(doc.get('use_cases', [])),       
+                    ' '.join(doc.get('related_concepts', [])) 
                 ]
                 corpus_text = " ".join(text_parts)
                 
@@ -133,9 +130,7 @@ class ComprehensionAgent:
 
         # 3. Score de Base
         final_score = (max_nmap * 0.5) + (semantic_score * 0.5)
-        
-        # --- AJOUT: BONUS TECHNIQUE (Anti-Rejet) ---
-        # Si un de ces mots est présent, c'est FORCÉMENT du Nmap, on booste le score.
+
         critical_keywords = [
             "scan", "nmap", "port", "ip", "tcp", "udp", "host", "target",
             "os", "fingerprint", "version", "detection",
@@ -143,19 +138,17 @@ class ComprehensionAgent:
             "firewall", "ids", "evade", "decoy", "spoof", "mtu", "fragment",
             "stealth", "syn", "ack", "connect", "timing"
         ]
-        
-        # On vérifie si un mot critique est dans la requête
+  
         query_lower = user_query.lower()
         if any(word in query_lower for word in critical_keywords):
-            final_score += 0.20  # GROS BONUS !
+            final_score += 0.20 
             print("   [BOOST] Mot-clé technique détecté (+0.20)")
 
-        # Pénalité Bruit (Seulement si le bruit est vraiment fort)
+        
         if max_noise > max_nmap and max_noise > 0.4:
             final_score -= 0.1
         
-        # --- AJOUT: SEUIL ABAISSÉ ---
-        # On baisse le seuil pour être plus permissif (Gateway)
+      
         THRESHOLD = 0.18 
         
         debug_info = f"TF-IDF: {max_nmap:.2f} | Noise: {max_noise:.2f} | Semantic: {semantic_score:.2f} | Final: {final_score:.2f}"
