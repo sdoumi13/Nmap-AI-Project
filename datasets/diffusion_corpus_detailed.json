@@ -1,0 +1,437 @@
+{
+  "metadata": {
+    "version": "2.0",
+    "purpose": "Diffusion Models (Text-to-Command Generation)",
+    "description": "Corpus détaillé avec descriptions textuelles riches pour entraîner des modèles de diffusion à générer des commandes Nmap à partir de descriptions en langage naturel",
+    "total_entries": 120,
+    "model_architecture": "Conditional Text Diffusion / Latent Diffusion for Commands"
+  },
+
+  "training_data": [
+    {
+      "id": "diff_001",
+      "text_description": "Je veux scanner tous les ports TCP d'un réseau local de classe C commençant par 192.168.1 pour découvrir les machines actives et leurs services. Le scan doit être complet et couvrir les 65535 ports.",
+      "text_embedding_context": "scan complet réseau local tous ports TCP découverte services machines actives réseau classe C 192.168.1.0/24 énumération complète 65535 ports",
+      "target_command": "nmap -p- 192.168.1.0/24",
+      "complexity_level": 1,
+      "semantic_tags": ["full port scan", "local network", "TCP", "complete", "class C network", "service discovery"],
+      "intent_category": "comprehensive_scanning",
+      "command_structure": {
+        "tool": "nmap",
+        "port_spec": "-p-",
+        "target": "192.168.1.0/24",
+        "additional_flags": []
+      }
+    },
+
+    {
+      "id": "diff_002",
+      "text_description": "Réaliser une découverte d'hôtes rapide sans scanner les ports sur le sous-réseau 10.0.0.0 avec un masque de 24 bits. Juste vérifier quelles machines répondent aux pings pour cartographier le réseau rapidement.",
+      "text_embedding_context": "découverte hôtes rapide ping sweep host discovery sans scan ports vérification disponibilité machines réseau 10.0.0.0/24 cartographie réseau rapide ICMP",
+      "target_command": "nmap -sn 10.0.0.0/24",
+      "complexity_level": 1,
+      "semantic_tags": ["host discovery", "ping scan", "no port scan", "quick", "network mapping"],
+      "intent_category": "host_discovery",
+      "command_structure": {
+        "tool": "nmap",
+        "scan_type": "-sn",
+        "target": "10.0.0.0/24",
+        "additional_flags": []
+      }
+    },
+
+    {
+      "id": "diff_003",
+      "text_description": "Identifier le système d'exploitation de la machine 192.168.1.100 en analysant les empreintes TCP/IP. J'ai besoin de savoir si c'est Windows, Linux, ou un autre OS pour préparer mes tests de sécurité.",
+      "text_embedding_context": "détection système exploitation OS fingerprinting empreintes TCP/IP identification Windows Linux système cible 192.168.1.100 reconnaissance prétests",
+      "target_command": "nmap -O 192.168.1.100",
+      "complexity_level": 3,
+      "semantic_tags": ["OS detection", "fingerprinting", "system identification", "TCP/IP", "reconnaissance"],
+      "intent_category": "os_detection",
+      "command_structure": {
+        "tool": "nmap",
+        "detection": "-O",
+        "target": "192.168.1.100",
+        "additional_flags": []
+      }
+    },
+
+    {
+      "id": "diff_004",
+      "text_description": "Scanner les ports HTTP, HTTPS et SSH (80, 443, 22) sur le serveur 192.168.1.100 et détecter les versions exactes des services qui tournent dessus. Important de connaître les versions pour identifier les vulnérabilités.",
+      "text_embedding_context": "scan ports web SSH HTTP HTTPS 22 80 443 détection versions services banner grabbing identification vulnérabilités serveur 192.168.1.100",
+      "target_command": "nmap -sV -p 22,80,443 192.168.1.100",
+      "complexity_level": 4,
+      "semantic_tags": ["service version", "web ports", "SSH", "banner grabbing", "vulnerability assessment prep"],
+      "intent_category": "version_detection",
+      "command_structure": {
+        "tool": "nmap",
+        "version_detection": "-sV",
+        "port_spec": "-p 22,80,443",
+        "target": "192.168.1.100",
+        "additional_flags": []
+      }
+    },
+
+    {
+      "id": "diff_005",
+      "text_description": "Lancer une analyse de vulnérabilités automatisée avec les scripts NSE sur les ports web 80 et 443 du serveur 192.168.1.100. Je veux détecter SQL injection, XSS, Shellshock et autres vulnérabilités communes sans crasher les services.",
+      "text_embedding_context": "analyse vulnérabilités NSE scripts automatisé ports web 80 443 SQL injection XSS shellshock détection vulnérabilités sécurisé non-destructif serveur web",
+      "target_command": "nmap --script \"vuln and safe\" -p 80,443 192.168.1.100",
+      "complexity_level": 7,
+      "semantic_tags": [
+        "vulnerability scan",
+        "NSE",
+        "web security",
+        "safe scripts",
+        "automated testing",
+        "non-destructive"
+      ],
+      "intent_category": "vulnerability_assessment",
+      "command_structure": {
+        "tool": "nmap",
+        "nse_script": "--script \"vuln and safe\"",
+        "port_spec": "-p 80,443",
+        "target": "192.168.1.100",
+        "additional_flags": []
+      }
+    },
+
+    {
+      "id": "diff_006",
+      "text_description": "Effectuer un scan furtif SYN sur une adresse IPv6 2001:db8::1 en ciblant les ports HTTP et HTTPS, sans envoyer de ping préalable, et exécuter les scripts NSE par défaut pour l'énumération. Le scan doit être discret pour éviter la détection IDS.",
+      "text_embedding_context": "scan furtif stealth SYN IPv6 2001:db8::1 ports web HTTP HTTPS sans ping skip host discovery scripts NSE défaut énumération discret évasion IDS",
+      "target_command": "nmap -6 -sS -Pn --script default -p 80,443 2001:db8::1",
+      "complexity_level": 8,
+      "semantic_tags": ["stealth scan", "SYN scan", "IPv6", "IDS evasion", "NSE default scripts", "no ping"],
+      "intent_category": "stealth_ipv6_scanning",
+      "command_structure": {
+        "tool": "nmap",
+        "ipv6": "-6",
+        "scan_type": "-sS",
+        "skip_ping": "-Pn",
+        "nse_script": "--script default",
+        "port_spec": "-p 80,443",
+        "target": "2001:db8::1",
+        "additional_flags": []
+      }
+    },
+
+    {
+      "id": "diff_007",
+      "text_description": "Contourner le pare-feu et l'IDS en utilisant 10 adresses IP leurres aléatoires pendant un scan SYN des ports 80 et 443 sur 192.168.1.100. L'objectif est de noyer ma véritable IP parmi les fausses pour compliquer l'identification.",
+      "text_embedding_context": "contournement pare-feu IDS évasion adresses IP leurres decoy spoofing 10 IP aléatoires scan SYN ports web obfuscation attaquant masquer source",
+      "target_command": "nmap -D RND:10 -sS -p 80,443 192.168.1.100",
+      "complexity_level": 9,
+      "semantic_tags": ["firewall bypass", "IDS evasion", "decoy scan", "IP spoofing", "stealth", "obfuscation"],
+      "intent_category": "advanced_evasion",
+      "command_structure": {
+        "tool": "nmap",
+        "decoy": "-D RND:10",
+        "scan_type": "-sS",
+        "port_spec": "-p 80,443",
+        "target": "192.168.1.100",
+        "additional_flags": []
+      }
+    },
+
+    {
+      "id": "diff_008",
+      "text_description": "Fragmenter les paquets IP pour essayer de contourner un pare-feu qui ne réassemble pas correctement les fragments. Scanner les ports 80 et 443 avec SYN scan sur 192.168.1.100 en utilisant des fragments de petite taille.",
+      "text_embedding_context": "fragmentation paquets IP contournement pare-feu fragments petite taille évasion firewall bypass réassemblage scan SYN ports web 80 443",
+      "target_command": "nmap -f -sS -p 80,443 192.168.1.100",
+      "complexity_level": 8,
+      "semantic_tags": ["packet fragmentation", "firewall bypass", "small fragments", "evasion", "SYN scan"],
+      "intent_category": "fragmentation_evasion",
+      "command_structure": {
+        "tool": "nmap",
+        "fragment": "-f",
+        "scan_type": "-sS",
+        "port_spec": "-p 80,443",
+        "target": "192.168.1.100",
+        "additional_flags": []
+      }
+    },
+
+    {
+      "id": "diff_009",
+      "text_description": "Réaliser un scan très agressif et rapide avec timing T4 incluant détection OS, version, scripts et traceroute sur tous les ports de 192.168.1.100. Besoin de résultats complets rapidement même si ça fait beaucoup de bruit.",
+      "text_embedding_context": "scan agressif rapide timing T4 complet détection OS version services scripts NSE traceroute tous ports comprehensive rapide bruyant visible",
+      "target_command": "nmap -T4 -A -p- 192.168.1.100",
+      "complexity_level": 6,
+      "semantic_tags": [
+        "aggressive scan",
+        "fast timing",
+        "comprehensive",
+        "OS detection",
+        "version scan",
+        "scripts",
+        "traceroute"
+      ],
+      "intent_category": "aggressive_comprehensive",
+      "command_structure": {
+        "tool": "nmap",
+        "timing": "-T4",
+        "aggressive": "-A",
+        "port_spec": "-p-",
+        "target": "192.168.1.100",
+        "additional_flags": []
+      }
+    },
+
+    {
+      "id": "diff_010",
+      "text_description": "Tester les scripts de brute force sur les services SSH et FTP des ports 22 et 21 du serveur 192.168.1.100 pour vérifier la robustesse des mots de passe. Audit de sécurité autorisé pour identifier les mots de passe faibles.",
+      "text_embedding_context": "brute force authentication SSH FTP ports 22 21 test mots de passe faibles audit sécurité scripts NSE dictionnaire cracking credentials",
+      "target_command": "nmap --script brute -p 22,21 192.168.1.100",
+      "complexity_level": 7,
+      "semantic_tags": ["brute force", "authentication testing", "SSH", "FTP", "password security", "NSE"],
+      "intent_category": "authentication_testing",
+      "command_structure": {
+        "tool": "nmap",
+        "nse_script": "--script brute",
+        "port_spec": "-p 22,21",
+        "target": "192.168.1.100",
+        "additional_flags": []
+      }
+    },
+
+    {
+      "id": "diff_011",
+      "text_description": "Scanner extrêmement lent avec timing paranoid T0 en SYN scan pour minimiser absolument toute chance de détection par les IDS/IPS. Une sonde toutes les 5 minutes sur les ports 80 et 443 de 192.168.1.100.",
+      "text_embedding_context": "scan très lent paranoid timing T0 évasion maximale IDS IPS furtif stealth extrême SYN scan discrétion absolue ports web 80 443",
+      "target_command": "nmap -T0 -sS -p 80,443 192.168.1.100",
+      "complexity_level": 9,
+      "semantic_tags": ["paranoid timing", "extremely slow", "maximum stealth", "IDS evasion", "SYN scan"],
+      "intent_category": "ultra_stealth",
+      "command_structure": {
+        "tool": "nmap",
+        "timing": "-T0",
+        "scan_type": "-sS",
+        "port_spec": "-p 80,443",
+        "target": "192.168.1.100",
+        "additional_flags": []
+      }
+    },
+
+    {
+      "id": "diff_012",
+      "text_description": "Scanner une plage d'adresses IPv6 2001:db8::/64 sur les 1000 premiers ports les plus courants. Audit de réseau IPv6 moderne pour identifier les services exposés sur la nouvelle infrastructure.",
+      "text_embedding_context": "scan réseau IPv6 plage 2001:db8::/64 ports courants top 1000 audit infrastructure moderne services exposés découverte IPv6",
+      "target_command": "nmap -6 --top-ports 1000 2001:db8::/64",
+      "complexity_level": 5,
+      "semantic_tags": ["IPv6", "network range", "top ports", "modern infrastructure", "service discovery"],
+      "intent_category": "ipv6_network_scan",
+      "command_structure": {
+        "tool": "nmap",
+        "ipv6": "-6",
+        "port_spec": "--top-ports 1000",
+        "target": "2001:db8::/64",
+        "additional_flags": []
+      }
+    },
+
+    {
+      "id": "diff_013",
+      "text_description": "Analyser la configuration du pare-feu en exécutant les scripts firewall-bypass et firewalk sur les ports 80 et 443 du routeur 192.168.1.1. Cartographier les règles de filtrage et identifier les possibilités de contournement.",
+      "text_embedding_context": "analyse configuration pare-feu firewall rules ACL scripts firewall-bypass firewalk ports web cartographie règles filtrage audit réseau routeur",
+      "target_command": "nmap --script firewall-bypass,firewalk -p 80,443 192.168.1.1",
+      "complexity_level": 7,
+      "semantic_tags": ["firewall analysis", "ACL mapping", "bypass detection", "network audit", "NSE scripts"],
+      "intent_category": "firewall_auditing",
+      "command_structure": {
+        "tool": "nmap",
+        "nse_script": "--script firewall-bypass,firewalk",
+        "port_spec": "-p 80,443",
+        "target": "192.168.1.1",
+        "additional_flags": []
+      }
+    },
+
+    {
+      "id": "diff_014",
+      "text_description": "Vérifier très rapidement si l'hôte 192.168.1.100 est accessible avec un simple ping scan sans scan de ports, en utilisant le timing le plus agressif T5 pour avoir une réponse immédiate.",
+      "text_embedding_context": "vérification rapide disponibilité hôte ping scan uniquement sans ports timing agressif T5 check uptime monitoring rapide immédiat",
+      "target_command": "nmap -sn -T5 192.168.1.100",
+      "complexity_level": 1,
+      "semantic_tags": ["quick check", "ping only", "fast timing", "availability", "monitoring"],
+      "intent_category": "quick_availability_check",
+      "command_structure": {
+        "tool": "nmap",
+        "scan_type": "-sn",
+        "timing": "-T5",
+        "target": "192.168.1.100",
+        "additional_flags": []
+      }
+    },
+
+    {
+      "id": "diff_015",
+      "text_description": "Effectuer un fingerprinting système complet avec détection OS, versions de services, récupération des bannières et en-têtes HTTP sur les ports SSH, HTTP et HTTPS de 192.168.1.100. Énumération maximale pour reconnaissance.",
+      "text_embedding_context": "fingerprinting complet système détection OS versions services bannières headers HTTP énumération maximale reconnaissance ports 22 80 443 audit complet",
+      "target_command": "nmap -sV -O --script banner,http-headers -p 22,80,443 192.168.1.100",
+      "complexity_level": 6,
+      "semantic_tags": [
+        "comprehensive fingerprinting",
+        "OS detection",
+        "version scan",
+        "banner grabbing",
+        "HTTP headers",
+        "full enumeration"
+      ],
+      "intent_category": "comprehensive_reconnaissance",
+      "command_structure": {
+        "tool": "nmap",
+        "version_detection": "-sV",
+        "os_detection": "-O",
+        "nse_script": "--script banner,http-headers",
+        "port_spec": "-p 22,80,443",
+        "target": "192.168.1.100",
+        "additional_flags": []
+      }
+    },
+
+    {
+      "id": "diff_016",
+      "text_description": "Scanner les ports UDP courants DNS, SNMP et NetBIOS (53, 161, 137) sur le réseau 192.168.1.0/24 avec détection de version. Les scans UDP sont lents donc on cible uniquement les ports importants.",
+      "text_embedding_context": "scan UDP ports courants DNS SNMP NetBIOS 53 161 137 détection version réseau local ciblé services UDP importants",
+      "target_command": "nmap -sU -sV -p 53,161,137 192.168.1.0/24",
+      "complexity_level": 5,
+      "semantic_tags": ["UDP scan", "DNS", "SNMP", "NetBIOS", "version detection", "targeted scan"],
+      "intent_category": "udp_service_scan",
+      "command_structure": {
+        "tool": "nmap",
+        "scan_type": "-sU",
+        "version_detection": "-sV",
+        "port_spec": "-p 53,161,137",
+        "target": "192.168.1.0/24",
+        "additional_flags": []
+      }
+    },
+
+    {
+      "id": "diff_017",
+      "text_description": "Combiner scan SYN furtif avec 5 leurres aléatoires, fragmentation de paquets et ajout de 50 octets de données aléatoires pour maximiser l'obfuscation. Triple évasion sur ports 80 et 443 de 192.168.1.100.",
+      "text_embedding_context": "évasion maximale triple obfuscation SYN furtif leurres fragmentation données aléatoires stealth avancé IDS bypass ports web 80 443",
+      "target_command": "nmap -f -D RND:5 -sS --data-length 50 -p 80,443 192.168.1.100",
+      "complexity_level": 10,
+      "semantic_tags": ["maximum evasion", "triple obfuscation", "stealth", "decoys", "fragmentation", "random data"],
+      "intent_category": "maximum_obfuscation",
+      "command_structure": {
+        "tool": "nmap",
+        "fragment": "-f",
+        "decoy": "-D RND:5",
+        "scan_type": "-sS",
+        "data_length": "--data-length 50",
+        "port_spec": "-p 80,443",
+        "target": "192.168.1.100",
+        "additional_flags": []
+      }
+    },
+
+    {
+      "id": "diff_018",
+      "text_description": "Tester les vulnérabilités SSL/TLS spécifiques Heartbleed, POODLE et paramètres Diffie-Hellman faibles sur le port HTTPS 443 du serveur web 192.168.1.100. Audit de sécurité cryptographique.",
+      "text_embedding_context": "audit SSL TLS vulnérabilités Heartbleed POODLE Diffie-Hellman cryptographie HTTPS 443 scripts NSE sécurité certificats web",
+      "target_command": "nmap --script ssl-heartbleed,ssl-poodle,ssl-dh-params -p 443 192.168.1.100",
+      "complexity_level": 6,
+      "semantic_tags": ["SSL/TLS", "cryptographic audit", "Heartbleed", "POODLE", "certificate security", "NSE"],
+      "intent_category": "ssl_vulnerability_scan",
+      "command_structure": {
+        "tool": "nmap",
+        "nse_script": "--script ssl-heartbleed,ssl-poodle,ssl-dh-params",
+        "port_spec": "-p 443",
+        "target": "192.168.1.100",
+        "additional_flags": []
+      }
+    },
+
+    {
+      "id": "diff_019",
+      "text_description": "Énumérer les CMS WordPress et Drupal sur le port 80 du serveur web 192.168.1.100 pour identifier la plateforme utilisée, les plugins installés et les versions vulnérables potentielles.",
+      "text_embedding_context": "énumération CMS WordPress Drupal détection plateforme web plugins versions vulnérabilités port 80 HTTP reconnaissance applicative",
+      "target_command": "nmap --script http-wordpress-enum,http-drupal-enum -p 80 192.168.1.100",
+      "complexity_level": 5,
+      "semantic_tags": ["CMS detection", "WordPress", "Drupal", "plugin enumeration", "web application", "NSE"],
+      "intent_category": "cms_enumeration",
+      "command_structure": {
+        "tool": "nmap",
+        "nse_script": "--script http-wordpress-enum,http-drupal-enum",
+        "port_spec": "-p 80",
+        "target": "192.168.1.100",
+        "additional_flags": []
+      }
+    },
+
+    {
+      "id": "diff_020",
+      "text_description": "Scanner avec MTU personnalisé de 24 octets pour contrôler précisément la taille des fragments et contourner un firewall spécifique. SYN scan sur ports web 80 et 443 de 192.168.1.100 avec fragmentation fine.",
+      "text_embedding_context": "MTU personnalisé 24 octets fragmentation précise contrôle taille fragments contournement firewall SYN scan ports web 80 443 évasion avancée",
+      "target_command": "nmap --mtu 24 -sS -p 80,443 192.168.1.100",
+      "complexity_level": 8,
+      "semantic_tags": ["custom MTU", "precise fragmentation", "firewall bypass", "SYN scan", "advanced evasion"],
+      "intent_category": "custom_fragmentation",
+      "command_structure": {
+        "tool": "nmap",
+        "mtu": "--mtu 24",
+        "scan_type": "-sS",
+        "port_spec": "-p 80,443",
+        "target": "192.168.1.100",
+        "additional_flags": []
+      }
+    }
+  ],
+
+  "conditional_generation_contexts": [
+    {
+      "condition_type": "stealth_level",
+      "values": {
+        "low": "scan normal, timing standard",
+        "medium": "SYN scan, timing T2 ou T3",
+        "high": "SYN scan + leurres + timing lent",
+        "maximum": "T0 paranoid + fragmentation + leurres + données aléatoires"
+      }
+    },
+    {
+      "condition_type": "target_type",
+      "values": {
+        "single_host": "IP unique ex: 192.168.1.100",
+        "small_network": "Réseau /28 ou /24",
+        "large_network": "Réseau /16 ou plus grand",
+        "ipv6": "Adresse ou réseau IPv6"
+      }
+    },
+    {
+      "condition_type": "scan_purpose",
+      "values": {
+        "discovery": "Découverte hôtes -sn",
+        "port_scan": "Scan ports basique",
+        "version_detect": "Détection versions -sV",
+        "os_detect": "Détection OS -O",
+        "vulnerability": "Scripts NSE vuln",
+        "comprehensive": "Scan complet -A"
+      }
+    }
+  ],
+
+  "training_notes": {
+    "model_architecture": "Conditional Latent Diffusion / Text-to-Command Transformer",
+    "denoising_steps": "50-100 for quality generation",
+    "guidance_scale": "7.5 for balanced creativity/accuracy",
+    "tokenization": "Command syntax aware tokenizer",
+    "conditioning": "Text embeddings from CLIP or custom encoder",
+    "loss_function": "Cross-entropy on command tokens + semantic similarity",
+    "data_augmentation": [
+      "Paraphrase descriptions",
+      "Vary technical vocabulary (scan/scanner, detect/identify)",
+      "Add context variations (security audit, pentest, network mapping)",
+      "Include typos and informal language in training"
+    ],
+    "special_considerations": [
+      "Commandes Nmap ont une syntaxe stricte",
+      "Les flags doivent être dans le bon ordre",
+      "Les adresses IP/réseau doivent être valides",
+      "Certaines combinaisons de flags sont incompatibles"
+    ]
+  }
+}

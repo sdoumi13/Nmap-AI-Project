@@ -5,7 +5,7 @@ Iterative correction loop with LLM feedback
 
 from typing import Tuple, List, Callable
 
-from mcp_wrapper.client import MCPClient
+from mcp_tools.mcp_client import MCPClient
 
 class SelfCorrectionAgent:
     """Autonomous self-correction loop"""
@@ -45,7 +45,7 @@ Return only the corrected command.
 """
             
             # Generate correction
-            corrected = self.generate(intent, feedback)
+            corrected = self.generate(intent, failed_command, feedback)
             history.append(f"Attempt {attempt + 1}: {corrected}")
             
             # Validate correction

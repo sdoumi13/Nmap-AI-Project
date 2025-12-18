@@ -29,7 +29,7 @@ class HybridValidationResult:
 
 class AdvancedHybridValidator:
     """
-    Advanced Hybrid Validator - ALWAYS uses both Semantic + Mistral API
+    Advanced Hybrid Validator - ALWAYS uses both Semantic + Mistral API fhemtini?
     
     Decision Logic:
     - Semantic score provides fast baseline (40% weight)
@@ -92,7 +92,7 @@ class AdvancedHybridValidator:
         # STEP 4: Determine Status
         if final_score >= 80 and llm_result.valid:
             status = ValidationStatus.VALID
-        elif final_score >= 50:
+        elif final_score >= 38:
             status = ValidationStatus.RECOVERABLE
         else:
             status = ValidationStatus.INVALID

@@ -7,7 +7,7 @@ llm:
 vm:
   host: "192.168.188.128"
   port: 22
-  username: "sdoumi"  # Change ici
+  username: "sdoumi"  
   password: "kali"  
   
 

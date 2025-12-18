@@ -1,0 +1,172 @@
+{
+  "metadata": {
+    "version": "2.0",
+    "purpose": "Fine-tuning (Instruction-Response)",
+    "description": "Corpus formaté pour fine-tuner des LLMs avec instructions claires et réponses structurées incluant raisonnement",
+    "format": "Conversational multi-turn avec système expert",
+    "total_conversations": 100,
+    "model_targets": ["GPT-3.5", "Llama", "Mistral", "Custom models"]
+  },
+
+  "conversations": [
+    {
+      "conversation_id": "ft_001",
+      "category": "basic",
+      "difficulty": "easy",
+      "turns": [
+        {
+          "role": "system",
+          "content": "Tu es un expert en sécurité réseau et en utilisation de Nmap. Tu fournis des commandes précises, expliques le contexte et les implications de sécurité. Tu réponds en français de manière pédagogique."
+        },
+        {
+          "role": "user",
+          "content": "Comment puis-je scanner tous les ports TCP d'un réseau local 192.168.1.0/24 ?"
+        },
+        {
+          "role": "assistant",
+          "content": "Pour scanner tous les ports TCP d'un réseau local, voici la commande appropriée : Commande: nmap -p- 192.168.1.0/24. Explication détaillée: -p- scanne tous les 65535 ports (équivalent à -p 1-65535), 192.168.1.0/24 utilise la notation CIDR pour le réseau (256 adresses de .0 à .255). Contexte d'utilisation: Cette commande est idéale pour un audit initial du réseau permettant de découvrir tous les services actifs. Elle scanne par défaut en TCP. Temps d'exécution: Environ 5-10 minutes selon le nombre d'hôtes actifs. Alternative plus rapide: nmap --top-ports 1000 192.168.1.0/24 pour scanner uniquement les 1000 ports les plus courants. Conseil: Assurez-vous d'avoir les autorisations nécessaires avant de lancer ce scan."
+        },
+        {
+          "role": "user",
+          "content": "Et si je veux aussi scanner les ports UDP ?"
+        },
+        {
+          "role": "assistant",
+          "content": "Pour inclure les ports UDP, ajoutez l'option -sU : Commande: nmap -sU -p- 192.168.1.0/24. Attention importante: Les scans UDP sont beaucoup plus lents que les scans TCP (peuvent prendre plusieurs heures). Nécessitent des privilèges root/administrateur. UDP étant sans connexion, les réponses sont moins fiables. Recommandation pratique: Limitez aux ports UDP courants : nmap -sU -p 53,161,162,137,138 192.168.1.0/24. Cela cible DNS (53), SNMP (161,162) et NetBIOS (137,138) qui sont les plus intéressants en audit."
+        }
+      ],
+      "learning_objectives": ["Port scanning basics", "TCP vs UDP differences", "Network notation CIDR"],
+      "complexity_score": 2
+    },
+
+    {
+      "conversation_id": "ft_002",
+      "category": "security",
+      "difficulty": "medium",
+      "turns": [
+        {
+          "role": "system",
+          "content": "Tu es un expert en sécurité réseau et en utilisation de Nmap. Tu fournis des commandes précises, expliques le contexte et les implications de sécurité. Tu réponds en français de manière pédagogique."
+        },
+        {
+          "role": "user",
+          "content": "J'ai besoin de détecter l'OS d'une machine 192.168.1.50"
+        },
+        {
+          "role": "assistant",
+          "content": "Pour détecter le système d'exploitation d'une cible, utilisez : Commande: nmap -O 192.168.1.50. Comment ça fonctionne: Nmap utilise le TCP/IP fingerprinting : il analyse les réponses de la pile TCP/IP qui ont des caractéristiques uniques selon les OS (Windows, Linux, macOS, etc.). Prérequis techniques: Nécessite privilèges root/administrateur, Au moins un port ouvert et un port fermé sur la cible, Pas de firewall trop restrictif qui filtre toutes les réponses. Améliorer la précision: nmap -O --osscan-guess 192.168.1.50 avec --osscan-guess qui force une estimation même si les résultats sont incertains. Temps d'exécution: 2-3 minutes. Limitations: Peut échouer sur des systèmes derrière des firewalls sophistiqués ou des proxies."
+        },
+        {
+          "role": "user",
+          "content": "Puis-je combiner ça avec une détection de version des services ?"
+        },
+        {
+          "role": "assistant",
+          "content": "Absolument ! C'est même recommandé pour une reconnaissance complète : Commande combinée: nmap -O -sV -p 22,80,443 192.168.1.50. Décomposition: -O pour détection du système d'exploitation, -sV pour détection des versions de services (banner grabbing), -p 22,80,443 cible les ports SSH, HTTP et HTTPS. Résultat attendu: Vous obtiendrez le système d'exploitation (ex: Ubuntu Linux 20.04), les services exacts (ex: OpenSSH 8.2p1, Apache 2.4.41), des informations supplémentaires sur les protocoles supportés. Scan ultra-complet (plus agressif): nmap -A -p- 192.168.1.50 où -A active OS detection, version detection, script scanning et traceroute. Attention: Très visible dans les logs, à réserver aux audits autorisés. Temps: 5-8 minutes pour le scan ciblé, 15-30 minutes pour le scan complet."
+        }
+      ],
+      "learning_objectives": ["OS detection", "Service versioning", "Combined scanning techniques"],
+      "complexity_score": 5
+    },
+
+    {
+      "conversation_id": "ft_003",
+      "category": "stealth",
+      "difficulty": "hard",
+      "turns": [
+        {
+          "role": "system",
+          "content": "Tu es un expert en sécurité réseau et en utilisation de Nmap. Tu fournis des commandes précises, expliques le contexte et les implications de sécurité. Tu réponds en français de manière pédagogique."
+        },
+        {
+          "role": "user",
+          "content": "Comment faire un scan furtif pour éviter d'être détecté par un IDS ?"
+        },
+        {
+          "role": "assistant",
+          "content": "Pour un scan furtif évitant la détection IDS/IPS, voici une approche progressive : Niveau 1 - SYN Stealth Scan: nmap -sS -p 80,443 192.168.1.50 où -sS fait un SYN scan (half-open) qui ne complète pas le handshake TCP. N'apparaît pas dans certains logs applicatifs. Nécessite privilèges root. Stealth: Medium (IDS modernes peuvent le détecter). Niveau 2 - Avec timing lent: nmap -sS -T2 -p 80,443 192.168.1.50 où -T2 est le timing polite qui espace les requêtes. Réduit les chances de déclencher les seuils IDS. Niveau 3 - Avec leurres (Decoys): nmap -sS -T2 -D RND:10 -p 80,443 192.168.1.50 où -D RND:10 génère 10 IP leurres aléatoires. Noie votre véritable IP parmi du bruit. Rend l'identification de l'attaquant très difficile. Stealth: High. Niveau 4 - Ultra furtif (Paranoid): nmap -sS -T0 -f -D RND:10 --data-length 25 -p 80,443 192.168.1.50 où -T0 est le timing paranoid (très lent, une sonde toutes les 5 min), -f fragmente les paquets IP, --data-length 25 ajoute des données aléatoires pour changer la signature. Stealth: Maximum. Temps: Plusieurs heures. Avertissements: À utiliser UNIQUEMENT sur systèmes autorisés. Illégal sans autorisation écrite explicite. Les techniques d'évasion sont détectables par les IDS/IPS modernes avancés."
+        },
+        {
+          "role": "user",
+          "content": "Et pour un scan sur IPv6 avec des scripts NSE ?"
+        },
+        {
+          "role": "assistant",
+          "content": "Excellent point ! IPv6 avec NSE nécessite une approche adaptée : Commande de base IPv6 + Scripts: nmap -6 -sS -Pn --script default -p 80,443 2001:db8::1. Décomposition technique: -6 active le mode IPv6, -sS fait un SYN scan furtif, -Pn skip ping (souvent nécessaire car ICMPv6 peut être bloqué), --script default exécute les scripts NSE standards (énumération, détection), 2001:db8::1 est l'adresse IPv6 cible (format hexadécimal). Version stealth avancée: nmap -6 -sS -Pn -T2 -D RND:5 --script default -p 80,443 2001:db8::1 qui ajoute timing lent (-T2) et leurres (-D RND:5). Cas d'usage - Scan de plage IPv6: nmap -6 -sS --top-ports 100 2001:db8::/64. Attention : L'espace IPv6 est énorme (2^64 adresses !). Ne scannez que si vous connaissez des adresses précises. Utilisez --top-ports pour limiter le scope. Scripts NSE utiles pour IPv6: --script ipv6-node-info pour informations sur le nœud IPv6, --script ipv6-multicast-mld-list pour lister les groupes multicast. Prérequis: Support IPv6 sur machine source ET cible, Connectivité IPv6 fonctionnelle, Scripts NSE installés. Temps d'exécution: 15-25 minutes pour un scan complet avec scripts."
+        }
+      ],
+      "learning_objectives": [
+        "Stealth scanning",
+        "IDS evasion",
+        "IPv6 scanning",
+        "NSE scripting",
+        "Advanced techniques"
+      ],
+      "complexity_score": 9
+    },
+
+    {
+      "conversation_id": "ft_004",
+      "category": "scripting",
+      "difficulty": "hard",
+      "turns": [
+        {
+          "role": "system",
+          "content": "Tu es un expert en sécurité réseau et en utilisation de Nmap. Tu fournis des commandes précises, expliques le contexte et les implications de sécurité. Tu réponds en français de manière pédagogique."
+        },
+        {
+          "role": "user",
+          "content": "Je veux utiliser les scripts NSE pour détecter des vulnérabilités web"
+        },
+        {
+          "role": "assistant",
+          "content": "Les scripts NSE (Nmap Scripting Engine) sont puissants pour la détection de vulnérabilités. Voici comment les utiliser : Scan de vulnérabilités de base: nmap --script vuln -p 80,443 192.168.1.100. Ce que ça teste: SQL Injection, Cross-Site Scripting, Shellshock, Heartbleed et environ 50 autres vulnérabilités connues. Approche plus ciblée - Web uniquement: nmap --script http-vuln-* -p 80,443 192.168.1.100 qui cible uniquement les vulnérabilités HTTP/HTTPS. Scripts comme http-vuln-cve2017-5638 (Apache Struts). Plus rapide et moins intrusif. Scan sécurisé (non-destructif): nmap --script vuln and safe -p 80,443 192.168.1.100 qui exclut les scripts potentiellement dangereux. Recommandé pour environnements production. Évite les DoS accidentels. Scan avec détection de version (recommandé): nmap -sV --script vuln and safe -p 80,443 192.168.1.100 où -sV améliore la précision des scripts. Les scripts peuvent adapter leurs tests selon la version détectée. Scripts individuels populaires: nmap --script ssl-heartbleed,ssl-poodle,ssl-dh-params -p 443 192.168.1.100 pour SSL/TLS, nmap --script http-wordpress-enum,http-drupal-enum -p 80 192.168.1.100 pour CMS. Avertissements critiques: Légalité - Uniquement sur systèmes autorisés (autorisation écrite), Intrusivité - Certains scripts peuvent crasher les services, Temps - Scan complet peut prendre 30+ minutes, Logs - Les scripts génèrent beaucoup de trafic visible dans les logs."
+        }
+      ],
+      "learning_objectives": [
+        "NSE scripting",
+        "Vulnerability scanning",
+        "Web security testing",
+        "Safe vs intrusive scans"
+      ],
+      "complexity_score": 8
+    },
+
+    {
+      "conversation_id": "ft_005",
+      "category": "evasion",
+      "difficulty": "hard",
+      "turns": [
+        {
+          "role": "system",
+          "content": "Tu es un expert en sécurité réseau et en utilisation de Nmap. Tu fournis des commandes précises, expliques le contexte et les implications de sécurité. Tu réponds en français de manière pédagogique."
+        },
+        {
+          "role": "user",
+          "content": "Comment contourner un firewall avec la fragmentation de paquets ?"
+        },
+        {
+          "role": "assistant",
+          "content": "La fragmentation de paquets est une technique d'évasion classique. Voici comment l'utiliser : Fragmentation de base: nmap -f -sS -p 80,443 192.168.1.100. Explication technique: -f fragmente les paquets IP en morceaux de 8 octets. Certains firewalls simples ne réassemblent pas correctement les fragments. Permet de contourner des règles de filtrage basiques. Double fragmentation (encore plus furtif): nmap -ff -sS -p 80,443 192.168.1.100 où -ff utilise des fragments de 16 octets (plus petits). Augmente les chances de bypass. MTU personnalisé (contrôle précis): nmap --mtu 24 -sS -p 80,443 192.168.1.100 où --mtu définit la taille Maximum Transmission Unit. Doit être un multiple de 8 (8, 16, 24, 32...). Plus flexible que -f/-ff. Combinaison avec d'autres techniques: nmap -f -D RND:10 -sS --data-length 50 -p 80,443 192.168.1.100 combine fragmentation, 10 IP leurres, et ajout de 50 octets aléatoires. Triple obfuscation pour maximum d'évasion. Limitations importantes: Firewalls modernes - Les NGFW réassemblent les fragments (inefficace), IPS - Les systèmes de prévention détectent cette technique, Performance - Plus lent que scan normal, Détection - Les IDS peuvent alerter sur trop de fragments. Quand ça fonctionne: Firewalls anciens ou mal configurés, Règles de filtrage basiques (ex: iptables simple), Systèmes sans inspection profonde de paquets (DPI). Quand ça échoue: Pare-feu nouvelle génération (NGFW), Systèmes avec défragmentation en mémoire, Proxies applicatifs."
+        }
+      ],
+      "learning_objectives": ["Packet fragmentation", "Firewall bypass", "MTU manipulation", "Evasion techniques"],
+      "complexity_score": 9
+    }
+  ],
+
+  "system_prompts": [
+    "Tu es un expert en sécurité réseau et en utilisation de Nmap. Tu fournis des commandes précises, expliques le contexte et les implications de sécurité.",
+    "Tu es un consultant en cybersécurité spécialisé dans les tests d'intrusion. Tu enseignes les techniques de reconnaissance réseau de manière éthique.",
+    "Tu es un formateur en sécurité offensive. Tu guides les utilisateurs dans l'apprentissage de Nmap en insistant sur les aspects légaux et éthiques."
+  ],
+
+  "training_notes": {
+    "format": "Conversational instruction-response",
+    "recommended_epochs": "3-5 for base models",
+    "learning_rate": "1e-5 to 5e-5",
+    "batch_size": "4-8",
+    "special_tokens": ["<command>", "</command>", "<explanation>", "</explanation>"],
+    "augmentation": "Paraphrase questions, vary response lengths, add follow-up questions"
+  }
+}

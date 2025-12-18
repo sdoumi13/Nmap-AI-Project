@@ -11,8 +11,8 @@ from datetime import datetime
 
 # Import tous les composants
 from validation.hybrid_validator import AdvancedHybridValidator, ValidationStatus
-from mcp_wrapper.server import MCPServer
-from mcp_wrapper.client import MCPClient
+from mcp_tools.mcp_server import MCPServer
+from mcp_tools.mcp_client import MCPClient
 from execution.sandbox_executor import SandboxExecutor
 from execution.vm_executor import VMExecutor
 from self_correction.corrector import SelfCorrectionAgent
@@ -253,17 +253,14 @@ class Agent5Pipeline:
         
         return report
     
-    def _mock_correction(self, intent: str, feedback: str) -> str:
-        """
-        Mock correction function
-        Replace with actual call to your generative agents
-        """
-        # Example: if needs root, switch to -sT
-        if "root" in feedback.lower():
-            return "nmap -sT -p 80,443 TARGET"
+    def _mock_correction(self, intent: str, failed_command: str, feedback: str) -> str:
+        # If the error is about root privileges, so i ADDed SUDO
+        if "root" in str(feedback).lower() or "privileges" in str(feedback).lower():
+            if "sudo" not in failed_command:
+                return "sudo " + failed_command
         
-        # Default
-        return "nmap -sS -p 80,443 TARGET"
+        # Fallback for other errors (your existing logic)
+        return "nmap -sT -p 80,443 TARGET"
 
 
 # ============================================================================
