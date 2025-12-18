@@ -49,7 +49,7 @@ agent5(validation+self-correction-sandboxing-testVM/
 └── README.md
 ```
 
-## 🚀 Installation
+## Installation
 
 ```bash
 # Installer les dépendances
@@ -59,7 +59,7 @@ pip install -r requirements.txt
 python agent_1_router/run_router.py
 ```
 
-## 📊 Corpus Enrichis
+##  Corpus Enrichis
 
 ### 1. RAG Corpus (rag_corpus_detailed.json)
 - **15 entrées** avec contexte, explications, prérequis, temps d'exécution
@@ -82,33 +82,4 @@ python agent_1_router/run_router.py
 2. **Complexity Agent** : Classifie en Easy/Medium/Hard selon les patterns détectés
 3. **Routing** : Dirige vers l'agent approprié selon la complexité
 
-## 💡 Exemples
 
-```bash
-# Easy Query
-> scan port 80
-✅ PERTINENT | ROUTAGE VERS: Agent Easy (KG-RAG)
-
-# Medium Query  
-> aggressive scan with os detection
-✅ PERTINENT | ROUTAGE VERS: Agent Medium (Fine-Tuned Model)
-
-# Hard Query
-> stealth scan ipv6 with nse scripts bypassing firewall
-✅ PERTINENT | ROUTAGE VERS: Agent Hard (Diffusion/ReAct)
-```
-
-## 📈 Statistiques de Session
-
-Le router affiche à la sortie :
-- Nombre total de requêtes
-- Pertinentes vs Irrelevantes
-- Distribution Easy/Medium/Hard
-
-## 🔧 Configuration
-
-Pour personnaliser les chemins des corpus, modifiez les paramètres dans `run_router.py` :
-
-```python
-comp_agent = ComprehensionAgent(corpus_path='path/to/your/rag_corpus.json')
-complex_agent = ComplexityAgent(finetuning_corpus_path='path/to/your/ft_corpus.json')
