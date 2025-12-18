@@ -21,7 +21,30 @@ Nmap-AI-Project/
 ├── datasets/
 │   ├── rag_corpus_detailed.json           # Corpus pour RAG (15 entrées enrichies)
 │   ├── finetuning_corpus_detailed.json    # Corpus pour Fine-tuning (5 conversations)
-│   └── diffusion_corpus_detailed.json     # Corpus pour Diffusion (20 paires)
+│   └── diffusion_corpus_detailed.json
+agent5(validation+self-correction-sandboxing-testVM/
+├── __init__.py
+├── validation/
+│   ├── __init__.py
+│   ├── semantic_validator.py      # Step 1: Semantic rules
+│   ├── llm_judge.py                # Step 2: LLM fallback
+│   └── hybrid_validator.py         # Step 3: Combined validation
+├── mcp/
+│   ├── __init__.py
+│   ├── protocol.py                 # Step 4: MCP message schemas
+│   ├── server.py                   # Step 5: MCP server
+│   └── client.py                   # Step 6: MCP client
+├── execution/
+│   ├── __init__.py
+│   ├── sandbox_executor.py         # Step 7: Docker sandbox
+│   └── vm_executor.py              # Step 8: VM execution
+├── self_correction/
+│   ├── __init__.py
+│   └── corrector.py                # Step 9: Self-correction loop
+└── orchestrator.py                 # Step 10: Main orchestrator
+"""
+
+   # Corpus pour Diffusion (20 paires)
 ├── requirements.txt
 └── README.md
 ```
