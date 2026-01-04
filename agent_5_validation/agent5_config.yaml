@@ -1,0 +1,23 @@
+# Agent 5 Configuration
+llm:
+  api_url: "http://192.168.11.1:1234/v1/chat/completions"
+  model: "mistral-7b-instruct-v0.3"
+  timeout: 30
+
+vm:
+  host: "192.168.188.128"
+  port: 22
+  username: "sdoumi"  
+  password: "kali"  
+  
+
+docker:
+  network_name: "nmap-sandbox"
+  nmap_image: "instrumentisto/nmap:latest"
+  target_image: "nginx:alpine"
+
+validation:
+  use_llm_fallback: true
+  max_retries: 3
+  sandbox_timeout: 60
+  similarity_threshold: 0.85

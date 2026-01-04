@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.pyc
+
+# Node / Next.js
+.next/
+node_modules/
+
+# Logs / reports
+agent_5_validation/*.json
+
+# OS
+.DS_Store
+Thumbs.db
+.env

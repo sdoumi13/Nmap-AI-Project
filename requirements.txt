@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+pydantic
+paramiko
+python-dotenv
+mcp
+numpy
+scikit-learn 
+sentence-transformers
