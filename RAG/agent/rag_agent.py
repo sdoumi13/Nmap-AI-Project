@@ -1,10 +1,8 @@
 import os
 import json
 from typing import Dict, Any
-# Plus besoin de dotenv pour la clé API car c'est local !
 
 from langchain_community.vectorstores import Chroma
-# On remplace OpenAI par des outils locaux
 from langchain_community.chat_models import ChatOllama
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_core.prompts import ChatPromptTemplate
@@ -13,6 +11,15 @@ from langchain_core.documents import Document
 from langchain_core.runnables import RunnablePassthrough
 
 class NmapRagAgent:
+    """
+    RAG Agent - Pure Generator
+    ONLY generates nmap commands using retrieval-augmented generation.
+    Does NOT decide, validate, or execute.
+    
+    Decision-making is delegated to RouterAgent (Complexity).
+    Execution is delegated to MCP Agent 5.
+    """
+    
     def __init__(self, dataset_path: str = "nmap_dataset.json", vector_db_path: str = "./chroma_db_local"):
         
         print("[*] Initialisation du mode LOCAL (Ollama + HuggingFace)...")
@@ -91,11 +98,16 @@ class NmapRagAgent:
         return chain
 
     def process(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Pure generation process.
+        Takes user query and generates nmap command.
+        Does NOT execute or validate.
+        """
         user_query = input_data.get("user_query", "")
         if not user_query: return {"error": "Query vide"}
 
         try:
-            print(f"[RAG Agent Local] Traitement : {user_query}")
+            print(f"[RAG Agent Local] Generating: {user_query}")
             generated_command = self.chain.invoke({"question": user_query})
             
             # Nettoyage fréquent avec les modèles locaux (ils sont parfois bavards)
@@ -112,3 +124,18 @@ class NmapRagAgent:
             }
         except Exception as e:
             return {"status": "error", "error_message": str(e)}
+    
+    async def generate(self, user_query: str) -> str:
+        """
+        Async wrapper for pure command generation.
+        Compatible with RouterAgent interface.
+        """
+        result = self.process({
+            "user_query": user_query,
+            "extracted_ip": None
+        })
+        
+        if result.get('status') == 'success':
+            return result.get('nmap_candidate')
+        else:
+            return None

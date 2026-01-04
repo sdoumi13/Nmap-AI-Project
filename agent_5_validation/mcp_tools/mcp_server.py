@@ -136,6 +136,7 @@ class Agent5MCPServer:
             "target": target,
             "agent": agent_name,
             "timestamp": datetime.now().isoformat(),
+            "final_status": "unknown",  # Initialize final_status
             "stages": {}
         }
         
@@ -347,9 +348,13 @@ async def mcp_execute(request: MCPExecuteRequest):
         skip_sandbox=request.skip_sandbox
     )
     
+    # Ensure final_status is always present
+    final_status = result.get('final_status', 'unknown')
+    final_command = result['stages'].get('self_correction', {}).get('final_command', request.command)
+    
     return MCPExecuteResponse(
-        final_status=result['final_status'],
-        command=result['stages'].get('self_correction', {}).get('final_command', request.command),
+        final_status=final_status,
+        command=final_command,
         stages=result['stages'],
         timestamp=result['timestamp']
     )

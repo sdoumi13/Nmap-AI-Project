@@ -9,13 +9,86 @@ from typing import Dict, Literal
 import sys
 import os
 from pathlib import Path
+import json
 
 # Setup imports
 current_dir = Path(__file__).resolve().parent
-if str(current_dir) not in sys.path:
-    sys.path.insert(0, str(current_dir))
+project_root = Path(current_dir).parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
 
-from agent_1_router.complexity import ComplexityAgent
+# ============= COMPLEXITY AGENT CLASS =============
+
+class ComplexityAgent:
+    """Classifies query complexity (Easy/Medium/Hard) for routing"""
+    
+    def __init__(self, finetuning_filename='finetuning_corpus_detailed.json', 
+                 diffusion_filename='diffusion_corpus_detailed.json'):
+        print("[*] Initializing ComplexityAgent...")
+        
+        # Load corpora
+        self.finetuning_filename = finetuning_filename
+        self.diffusion_filename = diffusion_filename
+        
+        # Define complexity patterns
+        self.easy_keywords = [
+            "scan port", "check port", "list services", "basic scan",
+            "host discovery", "ping", "which ports", "open port",
+            "is open", "listening", "service version", "simple",
+            "default", "standard", "quick", "fast"
+        ]
+        
+        self.medium_keywords = [
+            "stealth", "timing", "firewall", "evasion", "scripts",
+            "vuln", "version detection", "aggressive", "scan types",
+            "service detection", "version scan", "script scan",
+            "safe scripts", "default scripts", "ssl", "certificate"
+        ]
+        
+        self.hard_keywords = [
+            "os detection", "all", "comprehensive", "complete",
+            "vulnerability", "exploit", "brute force", "crack",
+            "authentication", "sensitive", "advanced", "custom",
+            "complex", "difficult", "reconnaissance"
+        ]
+        
+        print("[✓] ComplexityAgent ready")
+    
+    def classify(self, query: str) -> Dict[str, any]:
+        """Classify query complexity"""
+        query_lower = query.lower()
+        
+        # Count keyword matches
+        easy_score = sum(1 for kw in self.easy_keywords if kw in query_lower)
+        medium_score = sum(1 for kw in self.medium_keywords if kw in query_lower)
+        hard_score = sum(1 for kw in self.hard_keywords if kw in query_lower)
+        
+        # Determine complexity level
+        scores = {'Easy': easy_score, 'Medium': medium_score, 'Hard': hard_score}
+        max_score = max(scores.values()) if scores else 0
+        
+        if max_score == 0:
+            level = 'Medium'  # Default
+            confidence = 0.5
+        else:
+            level = [k for k, v in scores.items() if v == max_score][0]
+            confidence = max_score / (easy_score + medium_score + hard_score + 1)
+        
+        # Reason
+        if level == 'Easy':
+            reason = f"Query contains basic scanning keywords: {easy_score} matches"
+        elif level == 'Medium':
+            reason = f"Query contains intermediate keywords: {medium_score} matches"
+        else:
+            reason = f"Query contains advanced keywords: {hard_score} matches"
+        
+        return {
+            'level': level,
+            'confidence': min(confidence, 1.0),
+            'reason': reason
+        }
+
+# ============= FASTAPI APP =============
 
 app = FastAPI(
     title="Nmap Complexity Classifier API",
