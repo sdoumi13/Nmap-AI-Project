@@ -1,26 +1,4 @@
-# Agent 5 Configuration
-llm:
-  api_url: "http://192.168.11.1:1234/v1/chat/completions"
-  model: "mistral-7b-instruct-v0.3"
-  timeout: 30
 
-vm:
-  host: "192.168.188.128"
-  port: 22
-  username: "sdoumi"  
-  password: "kali"  
-  
-
-docker:
-  network_name: "nmap-sandbox"
-  nmap_image: "instrumentisto/nmap:latest"
-  target_image: "nginx:alpine"
-
-validation:
-  use_llm_fallback: true
-  max_retries: 3
-  sandbox_timeout: 60
-  similarity_threshold: 0.85
 
   # ============================================================================
 # NMAP-AI AGENT 5 - CONFIGURATION COMPLÈTE
@@ -61,6 +39,7 @@ docker:
   network_name: "nmap-sandbox"
   nmap_image: "instrumentisto/nmap:latest"
   target_image: "nginx:alpine"
+  
 
 validation:
   use_llm_fallback: true
@@ -90,7 +69,7 @@ vm:
   host: "192.168.188.128"     # IP de ta VM Ubuntu
   port: 22
   username: "sdoumi"
-  password: "kali"  # À remplacer par clé SSH en production
+  password: "kali"  
   
   # SSH settings
   ssh_timeout: 30
@@ -104,7 +83,7 @@ vm:
   results_dir: "/home/pentester/scan-results"
   
   # Safety features
-  sudo_required: false  # Set to true si nmap nécessite sudo
+  sudo_required: true
   allowed_targets:
     - "192.168.188.0/24"   # Local network
     - "scanme.nmap.org"    # Safe test target
@@ -174,47 +153,6 @@ reporting:
     - success_rate
     - correction_attempts
     - sandbox_results
-  
-  # Alerts
-  alerts:
-    enabled: true
-    email: "admin@example.com"
-    on_failure: true
-    on_security_violation: true
-
-# ============================================================================
-# SECURITY RULES
-# ============================================================================
-security:
-  # Dangerous patterns to block
-  blocked_patterns:
-    - "--script=exploit"
-    - "-sU"              # UDP scans (require root)
-    - "-O"               # OS detection (require root)
-    - "--traceroute"
-    - "&&"               # Command chaining
-    - ";"                # Command separator
-    - "|"                # Pipes
-    - "`"                # Command substitution
-    - "$("               # Command substitution
-  
-  # Dangerous flags
-  dangerous_flags:
-    - "-sS"    # SYN scan (requires root)
-    - "-sF"    # FIN scan
-    - "-sX"    # Xmas scan
-    - "-sN"    # Null scan
-  
-  # Port restrictions
-  restricted_ports:
-    - 25     # SMTP
-    - 110    # POP3
-    - 143    # IMAP
-  
-  # Scan rate limits
-  rate_limits:
-    max_rate: 1000   # packets/sec
-    max_parallelism: 100
 
 # ============================================================================
 # PERFORMANCE TUNING

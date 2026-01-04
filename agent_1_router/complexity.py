@@ -1,121 +1,112 @@
-# Fichier: agent_1_router/complexity.py
-import json
+"""
+complexity_api.py
+API REST utilisant ComplexityAgent local
+"""
+
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+from typing import Dict, Literal
+import sys
 import os
+from pathlib import Path
 
-class ComplexityAgent:
-    def __init__(self, 
-                 finetuning_filename='finetuning_corpus_detailed.json',
-                 diffusion_filename='diffusion_corpus_detailed.json'):
-        
-        print("🔍 Initialisation Complexity Agent...")
-        
-        # --- 1. GESTION DES CHEMINS ABSOLUS ---
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        project_root = os.path.dirname(current_dir)
-        
-        self.finetuning_path = os.path.join(project_root, 'datasets', finetuning_filename)
-        self.diffusion_path = os.path.join(project_root, 'datasets', diffusion_filename)
-        
-        print(f"   📂 Corpus Fine-tuning: {self.finetuning_path}")
-        print(f"   📂 Corpus Diffusion:   {self.diffusion_path}")
-        self.hard_keywords = ["script", "nse", "vuln", "exploit", "evade", "bypass", "ipv6", "fragment", "decoy", "spoof"]
-        self.medium_keywords = ["os", "version", "service", "udp", "syn", "stealth", "aggressive", "fingerprint", "timing"]
-        self.easy_keywords = ["scan", "port", "ping", "check", "host", "find", "discovery"]
+# Setup imports
+current_dir = Path(__file__).resolve().parent
+if str(current_dir) not in sys.path:
+    sys.path.insert(0, str(current_dir))
 
-        self.load_finetuning_patterns()
-        self.load_diffusion_patterns()
-        
-        print(f"   ✅ Complexity Agent prêt (Hard: {len(self.hard_keywords)}, Medium: {len(self.medium_keywords)})")
+from agent_1_router.complexity import ComplexityAgent
 
-    def load_finetuning_patterns(self):
-        """Charge les patterns du corpus Medium (Fine-tuning)"""
-        try:
-            with open(self.finetuning_path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-            
-            count = 0
-            for conv in data.get('conversations', []):
-                if conv.get('difficulty') == 'hard':
-                    messages = conv.get('turns', conv.get('messages', []))
-                    for msg in messages:
-                        if msg['role'] == 'user':
-                            self._extract_keywords(msg['content'], self.hard_keywords)
-                            count += 1
-            print(f"   📚 Appris de {count} exemples Fine-tuning.")
-            
-        except FileNotFoundError:
-            print(f"   ⚠️ Fichier Fine-tuning non trouvé.")
-        except Exception as e:
-            print(f"   ❌ Erreur Fine-tuning JSON: {e}")
+app = FastAPI(
+    title="Nmap Complexity Classifier API",
+    description="Routes queries to appropriate agent (RAG or Diffusion)",
+    version="1.0"
+)
 
-    def load_diffusion_patterns(self):
-        """Charge les patterns du corpus Hard (Diffusion)"""
-        try:
-            with open(self.diffusion_path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-            
-            count = 0
-            for item in data.get('training_data', []):
-                complexity = item.get('complexity_level', 1)
-                if complexity > 6:
-                    for tag in item.get('semantic_tags', []):
-                        if tag.lower() not in self.hard_keywords:
-                            self.hard_keywords.append(tag.lower())
-                            count += 1
-                    
-                    self._extract_keywords(item.get('text_description', ''), self.hard_keywords)
+# ============= MODELS =============
 
-            print(f"   📚 Appris de {count} tags complexes du corpus Diffusion.")
-            
-        except FileNotFoundError:
-            print(f"   ⚠️ Fichier Diffusion non trouvé.")
-        except Exception as e:
-            print(f"   ❌ Erreur Diffusion JSON: {e}")
+class ComplexityRequest(BaseModel):
+    query: str
+    user_id: str = "anonymous"
 
-    def _extract_keywords(self, text, target_list):
-        """Helper pour ajouter des mots intéressants s'ils sont nouveaux"""
-        triggers = ["ipv6", "firewall", "ids", "auth", "brute", "mtu", "data-length"]
-        for t in triggers:
-            if t in text.lower() and t not in target_list:
-                target_list.append(t)
+class ComplexityResponse(BaseModel):
+    query: str
+    complexity: Literal["EASY", "MEDIUM", "HARD"]
+    confidence: float
+    recommended_agent: Literal["RAG", "DIFFUSION"]
+    reasoning: str
 
-    def classify(self, query: str) -> dict:
-        q = query.lower()
-        
-        hard_matches = sum(1 for w in self.hard_keywords if w in q)
-        medium_matches = sum(1 for w in self.medium_keywords if w in q)
-        
-        # 1. HARD (Priorité absolue)
-        if hard_matches > 0:
-            return {
-                "level": "Hard",
-                "target_agent": "Agent Hard (Diffusion/ReAct)",
-                "reason": f"Complex patterns detected ({hard_matches} matches like '{self._get_match(q, self.hard_keywords)}')",
-                "matched_keywords": [w for w in self.hard_keywords if w in q],
-                "confidence": min(0.7 + (hard_matches * 0.1), 0.99)
-            }
-        
-        # 2. MEDIUM
-        if medium_matches >= 1:
-            return {
-                "level": "Medium",
-                "target_agent": "Agent Medium (Fine-Tuned)",
-                "reason": f"Specific options detected ({medium_matches} matches like '{self._get_match(q, self.medium_keywords)}')",
-                "matched_keywords": [w for w in self.medium_keywords if w in q],
-                "confidence": 0.85
-            }
-        
-        # 3. EASY
-        return {
-            "level": "Easy",
-            "target_agent": "Agent Easy (KG-RAG)",
-            "reason": "Simple intent detected",
-            "matched_keywords": [],
-            "confidence": 0.8
+# ============= GLOBAL CLASSIFIER =============
+
+complexity_agent = None
+
+@app.on_event("startup")
+def startup():
+    global complexity_agent
+    print("🔍 Loading ComplexityAgent...")
+    complexity_agent = ComplexityAgent(
+        finetuning_filename='finetuning_corpus_detailed.json',
+        diffusion_filename='diffusion_corpus_detailed.json'
+    )
+    print("✅ ComplexityAgent ready")
+
+# ============= ENDPOINTS =============
+
+@app.get("/")
+def root():
+    return {
+        "service": "Nmap Complexity Classifier API",
+        "version": "1.0",
+        "endpoints": {
+            "/classify": "POST - Classify query complexity",
+            "/health": "GET - Service health check"
         }
+    }
 
-    def _get_match(self, query, keywords):
-        """Retourne le premier mot clé trouvé pour l'affichage"""
-        for w in keywords:
-            if w in query: return w
-        return "?"
+@app.get("/health")
+def health():
+    return {"status": "healthy" if complexity_agent else "initializing"}
+
+@app.post("/classify", response_model=ComplexityResponse)
+def classify_query(request: ComplexityRequest):
+    if not complexity_agent:
+        raise HTTPException(status_code=503, detail="Classifier not ready")
+    
+    if not request.query.strip():
+        raise HTTPException(status_code=400, detail="Query cannot be empty")
+    
+    try:
+        result = complexity_agent.classify(request.query)
+        
+        # Map level to API format
+        level_map = {"Easy": "EASY", "Medium": "MEDIUM", "Hard": "HARD"}
+        agent_map = {
+            "Easy": "RAG",
+            "Medium": "DIFFUSION", 
+            "Hard": "DIFFUSION"
+        }
+        
+        complexity = level_map.get(result['level'], "MEDIUM")
+        
+        return ComplexityResponse(
+            query=request.query,
+            complexity=complexity,
+            confidence=result['confidence'],
+            recommended_agent=agent_map.get(result['level'], "DIFFUSION"),
+            reasoning=result['reason']
+        )
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Classification error: {str(e)}")
+
+if __name__ == "__main__":
+    import uvicorn
+    
+    print("""
+    ╔════════════════════════════════════════════╗
+    ║   NMAP COMPLEXITY CLASSIFIER API          ║
+    ║   Easy → RAG | Medium/Hard → Diffusion    ║
+    ╚════════════════════════════════════════════╝
+    """)
+    
+    uvicorn.run(app, host="0.0.0.0", port=7000, log_level="info")
