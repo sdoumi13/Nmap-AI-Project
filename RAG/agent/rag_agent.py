@@ -3,7 +3,7 @@ import json
 from typing import Dict, Any
 # Plus besoin de dotenv pour la clé API car c'est local !
 
-from langchain_chroma import Chroma
+from langchain_community.vectorstores import Chroma
 # On remplace OpenAI par des outils locaux
 from langchain_community.chat_models import ChatOllama
 from langchain_community.embeddings import HuggingFaceEmbeddings

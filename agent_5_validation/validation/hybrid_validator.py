@@ -26,7 +26,11 @@ class HybridValidationResult:
     suggestions: List[str]
     method_breakdown: Dict[str, float]  # {"semantic": 40, "llm": 60}
     confidence: float
-
+    
+    @property
+    def valid(self) -> bool:
+        return self.status == ValidationStatus.VALID
+    
 class AdvancedHybridValidator:
     """
     Advanced Hybrid Validator - ALWAYS uses both Semantic + Mistral API fhemtini?
@@ -45,23 +49,24 @@ class AdvancedHybridValidator:
         self.semantic_weight = 0.40  # 40% semantic
         self.llm_weight = 0.60       # 60% Mistral
     
-    def validate(self, query: str, command: str) -> HybridValidationResult:
+    async def validate(self, intent: str, command: str, agent_name: str = "unknown") -> HybridValidationResult:
         """
         ALWAYS performs both validations and combines results
         
         Returns comprehensive hybrid validation result
         """
         print(f"\n🔍 Hybrid Validation Pipeline")
+        print(f"\n🔍 Hybrid Validation Pipeline (Requested by: {agent_name})")
         print(f"{'='*60}")
         
         # STEP 1: Semantic Validation (Fast)
         print("  [1/2] Running semantic validation (rules + regex)...")
-        semantic_result = self.semantic.validate(query, command)
+        semantic_result = self.semantic.validate(intent, command)
         print(f"        → Semantic score: {semantic_result.score:.1f}/100")
         
         # STEP 2: Mistral API Validation (ALWAYS)
         print("  [2/2] Calling Mistral API for contextual analysis...")
-        llm_result = self.mistral.validate(query, command, semantic_result)
+        llm_result = self.mistral.validate(intent, command, semantic_result)
         print(f"        → LLM confidence: {llm_result.confidence:.2f}")
         print(f"        → LLM verdict: {'✅ Valid' if llm_result.valid else '❌ Invalid'}")
         

@@ -1,0 +1,312 @@
+{
+  "metadata": {
+    "version": "2.0",
+    "purpose": "RAG (Retrieval Augmented Generation)",
+    "description": "Corpus enrichi avec contexte, métadonnées et exemples structurés pour améliorer la récupération sémantique",
+    "total_entries": 150,
+    "categories": ["basic", "discovery", "security", "stealth", "advanced", "scripting", "ipv6", "timing", "evasion"]
+  },
+
+  "knowledge_base": [
+    {
+      "id": "rag_001",
+      "category": "basic",
+      "difficulty": "easy",
+      "intent": "Scan network ports TCP UDP",
+      "command": "nmap -p- 192.168.1.0/24",
+      "context": "Scanner tous les ports (TCP par défaut) sur un réseau local. Utile pour découvrir les services actifs.",
+      "explanation": "-p- signifie scanner les 65535 ports, l'adresse utilise la notation CIDR pour définir la plage",
+      "use_cases": ["Audit initial du réseau", "Inventaire des machines", "Découverte de services"],
+      "related_concepts": ["port scanning", "network discovery", "TCP protocol"],
+      "alternatives": ["nmap -p 1-65535 192.168.1.0/24", "nmap --top-ports 1000 192.168.1.0/24"],
+      "prerequisites": "Avoir les permissions nécessaires sur le réseau cible",
+      "execution_time": "5-10 minutes selon la taille du réseau",
+      "tags": ["port", "scan", "tcp", "udp", "network", "basic"]
+    },
+
+    {
+      "id": "rag_002",
+      "category": "discovery",
+      "difficulty": "easy",
+      "intent": "Host discovery ping sweep",
+      "command": "nmap -sn 10.0.0.0/24",
+      "context": "Découvrir rapidement les hôtes actifs sans scanner les ports. Aussi appelé 'ping scan' ou 'host discovery'.",
+      "explanation": "-sn désactive le scan de ports et effectue uniquement la découverte d'hôtes via ICMP echo, TCP SYN vers le port 443, TCP ACK vers 80, et ICMP timestamp",
+      "use_cases": [
+        "Cartographie rapide du réseau",
+        "Vérifier la disponibilité des machines",
+        "Préparation avant scan complet"
+      ],
+      "related_concepts": ["ping", "host discovery", "ICMP", "network mapping"],
+      "alternatives": ["nmap -sP 10.0.0.0/24", "nmap -sn --disable-arp-ping 10.0.0.0/24"],
+      "prerequisites": "Pas de firewall bloquant les requêtes ICMP",
+      "execution_time": "1-2 minutes",
+      "tags": ["discovery", "ping", "host", "icmp", "fast"]
+    },
+
+    {
+      "id": "rag_003",
+      "category": "security",
+      "difficulty": "medium",
+      "intent": "Detect operating system OS version",
+      "command": "nmap -O 192.168.1.100",
+      "context": "Identifier le système d'exploitation d'une cible en analysant les réponses TCP/IP stack fingerprinting.",
+      "explanation": "-O active la détection OS qui analyse les caractéristiques uniques de la pile TCP/IP pour identifier le système",
+      "use_cases": ["Audit de sécurité", "Inventaire système", "Préparation exploitation"],
+      "related_concepts": ["OS fingerprinting", "TCP/IP stack", "system identification"],
+      "alternatives": ["nmap -O --osscan-guess 192.168.1.100", "nmap -O --osscan-limit 192.168.1.100"],
+      "prerequisites": "Nécessite privilèges root/admin, au moins un port ouvert et un port fermé",
+      "execution_time": "2-3 minutes",
+      "limitations": "Peut échouer si firewall filtre les réponses",
+      "tags": ["os", "fingerprinting", "detection", "security", "identification"]
+    },
+
+    {
+      "id": "rag_004",
+      "category": "advanced",
+      "difficulty": "medium",
+      "intent": "Service version detection",
+      "command": "nmap -sV -p 22,80,443 192.168.1.100",
+      "context": "Détecter les versions exactes des services tournant sur les ports spécifiés. Crucial pour identifier les vulnérabilités connues.",
+      "explanation": "-sV interroge les services pour déterminer leur nom, version et informations supplémentaires en analysant les bannières",
+      "use_cases": ["Recherche de vulnérabilités", "Audit applicatif", "Gestion des patches"],
+      "related_concepts": ["service detection", "version scanning", "banner grabbing"],
+      "alternatives": [
+        "nmap -sV --version-intensity 5 -p 22,80,443 192.168.1.100",
+        "nmap -sV --version-all -p 22,80,443 192.168.1.100"
+      ],
+      "prerequisites": "Ports accessibles",
+      "execution_time": "3-5 minutes selon le nombre de ports",
+      "tags": ["service", "version", "detection", "banner", "vulnerability"]
+    },
+
+    {
+      "id": "rag_005",
+      "category": "scripting",
+      "difficulty": "hard",
+      "intent": "Vulnerability assessment script NSE",
+      "command": "nmap --script vuln -p 80,443 192.168.1.100",
+      "context": "Utiliser les scripts NSE (Nmap Scripting Engine) pour détecter automatiquement des vulnérabilités connues sur les services web.",
+      "explanation": "--script vuln charge tous les scripts de catégorie 'vuln' qui testent des vulnérabilités comme SQL injection, XSS, shellshock, etc.",
+      "use_cases": ["Pentest automatisé", "Audit de vulnérabilités", "Compliance security"],
+      "related_concepts": ["NSE", "vulnerability scanning", "automated exploitation", "CVE detection"],
+      "alternatives": [
+        "nmap --script \"vuln and safe\" -p 80,443 192.168.1.100",
+        "nmap --script default,vuln -p 80,443 192.168.1.100"
+      ],
+      "prerequisites": "Scripts NSE installés, peut nécessiter privilèges admin",
+      "execution_time": "10-30 minutes selon le nombre de scripts",
+      "warnings": "Certains scripts peuvent être intrusifs et endommager les services",
+      "tags": ["nse", "script", "vulnerability", "exploit", "automation", "pentest"]
+    },
+
+    {
+      "id": "rag_006",
+      "category": "stealth",
+      "difficulty": "hard",
+      "intent": "Stealth SYN scan with script execution on IPv6 target",
+      "command": "nmap -6 -sS -Pn --script default -p 80,443 2001:db8::1",
+      "context": "Scan furtif sur cible IPv6 combinant SYN scan pour l'évasion et scripts pour l'énumération. Technique avancée pour éviter la détection IDS.",
+      "explanation": "-6 active IPv6, -sS effectue un SYN scan (half-open) furtif, -Pn ignore le ping (utile si ICMP bloqué), --script default exécute les scripts standards",
+      "use_cases": ["Pentest avancé", "Évasion IDS/IPS", "Audit IPv6", "Red team operations"],
+      "related_concepts": ["IPv6", "stealth scanning", "SYN scan", "IDS evasion", "NSE scripting"],
+      "alternatives": [
+        "nmap -6 -sS -D RND:10 --script default -p 80,443 2001:db8::1",
+        "nmap -6 -sS -f --script default -p 80,443 2001:db8::1"
+      ],
+      "prerequisites": "Privilèges root, support IPv6 sur la machine attaquante et cible",
+      "execution_time": "15-25 minutes",
+      "stealth_level": "High - SYN scan ne complète pas le handshake TCP",
+      "detection_risk": "Medium - Les IDS modernes peuvent détecter les scans SYN",
+      "tags": ["ipv6", "stealth", "syn", "scan", "evasion", "ids", "script", "advanced"]
+    },
+
+    {
+      "id": "rag_007",
+      "category": "evasion",
+      "difficulty": "hard",
+      "intent": "Bypass IDS firewall using decoys",
+      "command": "nmap -D RND:10 -sS -p 80,443 192.168.1.100",
+      "context": "Utiliser des adresses IP leurres pour noyer le scan parmi du trafic factice et tromper les systèmes de détection d'intrusion.",
+      "explanation": "-D RND:10 génère 10 adresses IP aléatoires comme leurres, -sS utilise SYN scan, rendant très difficile l'identification de l'attaquant réel",
+      "use_cases": ["Évasion avancée", "Tests de sécurité réseau", "Vérification efficacité IDS"],
+      "related_concepts": ["decoy scanning", "IDS evasion", "IP spoofing", "obfuscation"],
+      "alternatives": [
+        "nmap -D 192.168.1.50,192.168.1.51,ME -sS -p 80,443 192.168.1.100",
+        "nmap -D RND:5 -f -sS -p 80,443 192.168.1.100"
+      ],
+      "prerequisites": "Privilèges root, connaissance du réseau",
+      "execution_time": "Variable selon le nombre de leurres",
+      "stealth_level": "Very High",
+      "legal_warning": "À utiliser uniquement sur des systèmes autorisés",
+      "tags": ["decoy", "evasion", "ids", "bypass", "firewall", "spoofing", "advanced"]
+    },
+
+    {
+      "id": "rag_008",
+      "category": "evasion",
+      "difficulty": "hard",
+      "intent": "Fragment packets to bypass firewall",
+      "command": "nmap -f -sS -p 80,443 192.168.1.100",
+      "context": "Fragmenter les paquets IP pour contourner certains pare-feu qui n'inspectent pas correctement les fragments.",
+      "explanation": "-f fragmente les paquets en morceaux de 8 octets, rendant difficile l'inspection par les firewalls simples",
+      "use_cases": ["Contournement firewall", "Test de robustesse pare-feu", "Évasion IDS basiques"],
+      "related_concepts": ["packet fragmentation", "firewall bypass", "MTU manipulation"],
+      "alternatives": ["nmap --mtu 16 -sS -p 80,443 192.168.1.100", "nmap -ff -sS -p 80,443 192.168.1.100"],
+      "prerequisites": "Privilèges root",
+      "execution_time": "Plus lent que scan normal",
+      "stealth_level": "High",
+      "limitations": "Inefficace contre les firewalls modernes avec défragmentation",
+      "tags": ["fragmentation", "evasion", "firewall", "bypass", "mtu", "advanced"]
+    },
+
+    {
+      "id": "rag_009",
+      "category": "timing",
+      "difficulty": "medium",
+      "intent": "Aggressive scan with T4 timing",
+      "command": "nmap -T4 -A -p- 192.168.1.100",
+      "context": "Scan agressif et complet avec détection OS, version, scripts et traceroute. Rapide mais facilement détectable.",
+      "explanation": "-T4 accélère le scan (templates de timing de 0 à 5), -A active la détection aggressive (OS+version+scripts+traceroute), -p- scanne tous les ports",
+      "use_cases": ["Audit interne rapide", "Environnement contrôlé", "Besoin de résultats rapides"],
+      "related_concepts": ["timing templates", "aggressive scan", "comprehensive scan"],
+      "alternatives": ["nmap -T5 -A -p- 192.168.1.100", "nmap -T4 -sV -O --script default -p- 192.168.1.100"],
+      "prerequisites": "Environnement autorisé",
+      "execution_time": "10-20 minutes",
+      "stealth_level": "Low - Très bruyant",
+      "detection_risk": "Very High",
+      "tags": ["aggressive", "timing", "fast", "comprehensive", "t4", "detection"]
+    },
+
+    {
+      "id": "rag_010",
+      "category": "scripting",
+      "difficulty": "medium",
+      "intent": "Brute force authentication with NSE",
+      "command": "nmap --script brute -p 22,21 192.168.1.100",
+      "context": "Tenter de forcer l'authentification sur les services SSH et FTP en utilisant des dictionnaires de mots de passe.",
+      "explanation": "--script brute charge les scripts de brute force NSE qui testent des combinaisons username/password communes",
+      "use_cases": ["Test de mots de passe faibles", "Audit de politique de mots de passe", "Pentest"],
+      "related_concepts": ["brute force", "authentication testing", "password cracking", "NSE"],
+      "alternatives": [
+        "nmap --script ssh-brute,ftp-brute -p 22,21 192.168.1.100",
+        "nmap --script brute --script-args userdb=users.txt,passdb=pass.txt -p 22 192.168.1.100"
+      ],
+      "prerequisites": "Autorisation écrite, listes de mots de passe",
+      "execution_time": "Variable, peut prendre des heures",
+      "legal_warning": "Illégal sans autorisation explicite",
+      "detection_risk": "Very High - Génère de nombreuses connexions échouées",
+      "tags": ["brute", "force", "authentication", "password", "nse", "script", "pentest"]
+    },
+
+    {
+      "id": "rag_011",
+      "category": "advanced",
+      "difficulty": "medium",
+      "intent": "System fingerprinting enumeration",
+      "command": "nmap -sV -O --script banner,http-headers -p 80,443,22 192.168.1.100",
+      "context": "Fingerprinting complet combinant détection OS, version des services et récupération des bannières pour une énumération maximale.",
+      "explanation": "Combine plusieurs techniques : -sV pour versions, -O pour OS, banner pour bannières, http-headers pour en-têtes HTTP",
+      "use_cases": ["Reconnaissance complète", "Préparation exploitation", "Cartographie détaillée"],
+      "related_concepts": ["fingerprinting", "enumeration", "reconnaissance", "banner grabbing"],
+      "alternatives": [
+        "nmap -A --script default,discovery -p 80,443,22 192.168.1.100",
+        "nmap -sV -O --script-args http.useragent='CustomUA' -p 80,443,22 192.168.1.100"
+      ],
+      "prerequisites": "Privilèges root pour -O",
+      "execution_time": "5-8 minutes",
+      "tags": ["fingerprinting", "enumeration", "banner", "reconnaissance", "os", "version"]
+    },
+
+    {
+      "id": "rag_012",
+      "category": "stealth",
+      "difficulty": "hard",
+      "intent": "Slow scan to evade detection",
+      "command": "nmap -T0 -sS -p 80,443 192.168.1.100",
+      "context": "Scan extrêmement lent (paranoid timing) pour minimiser les chances de détection par les IDS/IPS.",
+      "explanation": "-T0 est le timing le plus lent (une sonde toutes les 5 minutes), -sS utilise SYN scan pour éviter les logs",
+      "use_cases": ["Évasion IDS maximum", "Environnement hautement surveillé", "Red team stealth ops"],
+      "related_concepts": ["slow scanning", "timing control", "IDS evasion", "stealth"],
+      "alternatives": ["nmap -T1 -sS -p 80,443 192.168.1.100", "nmap -T0 -sS --scan-delay 10s -p 80,443 192.168.1.100"],
+      "prerequisites": "Beaucoup de temps, patience",
+      "execution_time": "Plusieurs heures voire jours",
+      "stealth_level": "Maximum",
+      "detection_risk": "Very Low",
+      "tags": ["slow", "stealth", "paranoid", "t0", "evasion", "timing", "ids"]
+    },
+
+    {
+      "id": "rag_013",
+      "category": "ipv6",
+      "difficulty": "medium",
+      "intent": "Scan IPv6 address range for open ports",
+      "command": "nmap -6 -p 1-1000 2001:db8::/64",
+      "context": "Scanner les 1000 premiers ports sur un réseau IPv6. Important car IPv6 devient de plus en plus courant.",
+      "explanation": "-6 active le mode IPv6, utilise notation CIDR pour définir le réseau, scanne les ports les plus courants",
+      "use_cases": ["Audit réseau IPv6", "Migration IPv6", "Découverte services modernes"],
+      "related_concepts": ["IPv6", "network scanning", "dual stack", "modern networking"],
+      "alternatives": ["nmap -6 --top-ports 100 2001:db8::/64", "nmap -6 -sV -p 22,80,443 2001:db8::1-100"],
+      "prerequisites": "Support IPv6 sur machine source et cible",
+      "execution_time": "Variable selon la taille du réseau",
+      "limitations": "Espace d'adressage IPv6 énorme rend les scans complets impraticables",
+      "tags": ["ipv6", "network", "scan", "modern", "ports"]
+    },
+
+    {
+      "id": "rag_014",
+      "category": "scripting",
+      "difficulty": "medium",
+      "intent": "Check firewall status and rules",
+      "command": "nmap --script firewall-bypass,firewalk -p 80,443 192.168.1.1",
+      "context": "Analyser la configuration du pare-feu et identifier les règles de filtrage en place.",
+      "explanation": "firewall-bypass teste des techniques de contournement, firewalk cartographie les règles de filtrage",
+      "use_cases": ["Audit firewall", "Test de configuration réseau", "Vérification ACL"],
+      "related_concepts": ["firewall testing", "ACL analysis", "network security audit"],
+      "alternatives": [
+        "nmap --script firewall-bypass -D RND:5 -p 80,443 192.168.1.1",
+        "nmap --script firewalk --traceroute -p 80,443 192.168.1.1"
+      ],
+      "prerequisites": "Autorisations nécessaires",
+      "execution_time": "5-10 minutes",
+      "tags": ["firewall", "rules", "acl", "bypass", "script", "security"]
+    },
+
+    {
+      "id": "rag_015",
+      "category": "discovery",
+      "difficulty": "easy",
+      "intent": "Check if host is up quickly",
+      "command": "nmap -sn -T5 192.168.1.100",
+      "context": "Vérification rapide de disponibilité d'un hôte sans scanner les ports.",
+      "explanation": "-sn désactive scan ports (ping only), -T5 utilise le timing le plus agressif pour résultats rapides",
+      "use_cases": ["Monitoring rapide", "Vérification uptime", "Script automatisé"],
+      "related_concepts": ["ping", "host detection", "availability check"],
+      "alternatives": ["nmap -sn -PR 192.168.1.100", "nmap -sn --disable-arp-ping 192.168.1.100"],
+      "prerequisites": "Aucun",
+      "execution_time": "Quelques secondes",
+      "tags": ["ping", "fast", "check", "availability", "quick", "monitoring"]
+    }
+  ],
+
+  "query_examples": [
+    {
+      "user_query": "I want to scan all ports on my local network",
+      "matched_intent": "Scan network ports TCP UDP",
+      "retrieved_id": "rag_001",
+      "confidence": 0.95
+    },
+    {
+      "user_query": "detect os version on target server",
+      "matched_intent": "Detect operating system OS version",
+      "retrieved_id": "rag_003",
+      "confidence": 0.92
+    },
+    {
+      "user_query": "stealthy ipv6 scan with scripts",
+      "matched_intent": "Stealth SYN scan with script execution on IPv6 target",
+      "retrieved_id": "rag_006",
+      "confidence": 0.89
+    }
+  ]
+}

@@ -21,3 +21,229 @@ validation:
   max_retries: 3
   sandbox_timeout: 60
   similarity_threshold: 0.85
+
+  # ============================================================================
+# NMAP-AI AGENT 5 - CONFIGURATION COMPLÈTE
+# ============================================================================
+
+# ============================================================================
+# VALIDATION SETTINGS
+# ============================================================================
+validation:
+  # LLM Judge (Mistral via LM Studio)
+  mistral_api_url: "http://192.168.11.1:1234/v1/chat/completions"
+  mistral_model: "mistral-7b-instruct-v0.3"
+  mistral_timeout: 30
+  
+  # Scoring thresholds
+  thresholds:
+    valid: 80        # Score >= 80 → Valid
+    recoverable: 50  # 50 <= Score < 80 → Recoverable (self-correction)
+    invalid: 0       # Score < 50 → Invalid (reject)
+  
+  # Self-correction
+  max_retries: 3
+  retry_delay: 2  # seconds
+  
+  # Validation methods priority
+  methods:
+    - semantic    # Règles statiques (rapide)
+    - llm_judge   # LLM validation (précis)
+    - hybrid      # Combinaison des deux (recommandé)
+  
+  default_method: "hybrid"
+
+# ============================================================================
+# DOCKER SANDBOX SETTINGS
+# ============================================================================
+
+docker:
+  network_name: "nmap-sandbox"
+  nmap_image: "instrumentisto/nmap:latest"
+  target_image: "nginx:alpine"
+
+validation:
+  use_llm_fallback: true
+  max_retries: 3
+  sandbox_timeout: 60
+  similarity_threshold: 0.85
+
+  
+  # Safety features
+  read_only: true
+  no_root: true
+  
+  # Allowed commands (whitelist)
+  allowed_commands:
+    - nmap
+    - ping
+    - traceroute
+  
+  # Resource limits
+  max_processes: 50
+  max_open_files: 100
+
+# ============================================================================
+# VM EXECUTION SETTINGS (Ubuntu via SSH)
+# ============================================================================
+vm:
+  host: "192.168.188.128"     # IP de ta VM Ubuntu
+  port: 22
+  username: "sdoumi"
+  password: "kali"  # À remplacer par clé SSH en production
+  
+  # SSH settings
+  ssh_timeout: 30
+  command_timeout: 120
+  
+  # Working directory
+  workdir: "/home/pentester/nmap-scans"
+  
+  # Output management
+  save_results: true
+  results_dir: "/home/pentester/scan-results"
+  
+  # Safety features
+  sudo_required: false  # Set to true si nmap nécessite sudo
+  allowed_targets:
+    - "192.168.188.0/24"   # Local network
+    - "scanme.nmap.org"    # Safe test target
+    - "localhost"
+
+# ============================================================================
+# MCP SERVER SETTINGS
+# ============================================================================
+mcp:
+  host: "0.0.0.0"
+  port: 5000
+  
+  # API settings
+  max_request_size: "10MB"
+  timeout: 120
+  
+  # Rate limiting
+  rate_limit:
+    enabled: true
+    requests_per_minute: 30
+    burst: 10
+  
+  # Logging
+  log_level: "INFO"
+  log_requests: true
+  
+  # Authentication (optionnel)
+  auth:
+    enabled: false
+    api_key: "your-secret-key-here"
+
+# ============================================================================
+# AGENT CLIENTS SETTINGS
+# ============================================================================
+agents:
+  # Agent 2 - RAG
+  rag:
+    name: "rag-agent"
+    priority: 1
+    timeout: 60
+    
+  # Agent 3 - Diffusion
+  diffusion:
+    name: "diffusion-agent"
+    priority: 2
+    timeout: 90
+  
+  # Agent 1 - Router
+  router:
+    name: "router-agent"
+    priority: 0
+    timeout: 30
+
+# ============================================================================
+# REPORTING & MONITORING
+# ============================================================================
+reporting:
+  # Report generation
+  enabled: true
+  format: "json"  # json, yaml, or markdown
+  save_dir: "./agent5_reports"
+  
+  # Metrics to track
+  metrics:
+    - validation_score
+    - execution_time
+    - success_rate
+    - correction_attempts
+    - sandbox_results
+  
+  # Alerts
+  alerts:
+    enabled: true
+    email: "admin@example.com"
+    on_failure: true
+    on_security_violation: true
+
+# ============================================================================
+# SECURITY RULES
+# ============================================================================
+security:
+  # Dangerous patterns to block
+  blocked_patterns:
+    - "--script=exploit"
+    - "-sU"              # UDP scans (require root)
+    - "-O"               # OS detection (require root)
+    - "--traceroute"
+    - "&&"               # Command chaining
+    - ";"                # Command separator
+    - "|"                # Pipes
+    - "`"                # Command substitution
+    - "$("               # Command substitution
+  
+  # Dangerous flags
+  dangerous_flags:
+    - "-sS"    # SYN scan (requires root)
+    - "-sF"    # FIN scan
+    - "-sX"    # Xmas scan
+    - "-sN"    # Null scan
+  
+  # Port restrictions
+  restricted_ports:
+    - 25     # SMTP
+    - 110    # POP3
+    - 143    # IMAP
+  
+  # Scan rate limits
+  rate_limits:
+    max_rate: 1000   # packets/sec
+    max_parallelism: 100
+
+# ============================================================================
+# PERFORMANCE TUNING
+# ============================================================================
+performance:
+  # Async settings
+  max_concurrent_validations: 5
+  max_concurrent_executions: 2
+  
+  # Caching
+  cache:
+    enabled: true
+    ttl: 300  # seconds
+    max_size: 1000  # entries
+  
+  # Connection pooling
+  connection_pool:
+    size: 10
+    timeout: 30
+
+# ============================================================================
+# DEBUGGING & DEVELOPMENT
+# ============================================================================
+debug:
+  enabled: false
+  verbose: false
+  save_intermediate_results: true
+  
+  # Test mode (skip actual execution)
+  test_mode: false
+  mock_vm: false
+  mock_sandbox: false
