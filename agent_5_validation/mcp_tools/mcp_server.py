@@ -187,6 +187,7 @@ class Agent5MCPServer:
         
         report['stages']['self_correction'] = {
             "applied": correction_applied,
+            "original_command": report['command'],
             "attempts": retry_count,
             "final_command": command,
             "final_score": v_res['score']

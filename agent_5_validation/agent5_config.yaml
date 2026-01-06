@@ -40,14 +40,6 @@ docker:
   nmap_image: "instrumentisto/nmap:latest"
   target_image: "nginx:alpine"
   
-
-validation:
-  use_llm_fallback: true
-  max_retries: 3
-  sandbox_timeout: 60
-  similarity_threshold: 0.85
-
-  
   # Safety features
   read_only: true
   no_root: true
@@ -61,6 +53,11 @@ validation:
   # Resource limits
   max_processes: 50
   max_open_files: 100
+  
+  # Validation settings for sandbox
+  use_llm_fallback: true
+  sandbox_timeout: 60
+  similarity_threshold: 0.85
 
 # ============================================================================
 # VM EXECUTION SETTINGS (Ubuntu via SSH)

@@ -13,4 +13,9 @@ agent_5_validation/*.json
 .DS_Store
 Thumbs.db
 .env
-.hintrc
+.hintrc"path/to/large_file" 
+**/chroma_db_local/ 
+*.bin 
+*.sqlite3 
+*.pickle 
+*.safetensors 
