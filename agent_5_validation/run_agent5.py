@@ -241,60 +241,31 @@ class Agent5Pipeline:
 # ============================================================================
 
 async def main():
-    """Main execution script"""
+    """Main execution script - Agent 5 MCP Server (waits for requests from Router)"""
     
     # Initialize Agent 5
+    print("\n✅ Agent 5 MCP Server ready and waiting for requests...")
+    print("=" * 70)
+    print("Expected flow:")
+    print("  1. User enters query in ROUTER > prompt")
+    print("  2. Router classifies complexity (RAG or Diffusion)")
+    print("  3. Agent generates command")
+    print("  4. Agent sends command to this Agent 5 MCP Server")
+    print("  5. Agent 5 validates → corrects → sandbox → VM execution")
+    print("=" * 70)
+    
     agent5 = Agent5Pipeline(config_path="agent5_config.yaml")
     
-    # Test cases
-    test_cases = [
-        {
-            "name": "Test 1: Simple Web Scan",
-            "intent": "Scan web ports",
-            "command": "nmap -sT -p 80,443 TARGET",
-            "target": "scanme.nmap.org",
-            "agent": "easy-rag"
-        },
-        {
-            "name": "Test 2: Stealth Scan (needs correction)",
-            "intent": "Stealth scan web ports",
-            "command": "nmap -sS -p 80,443 TARGET",
-            "target": "192.168.188.1",
-            "agent": "medium-t5"
-        },
-        {
-            "name": "Test 3: Full Scan",
-            "intent": "Comprehensive security scan",
-            "command": "nmap -sV -O -p- TARGET",
-            "target": "192.168.188.1",
-            "agent": "hard-diffusion"
-        }
-    ]
+    print("\n🎯 Agent 5 is running and ready to process commands from Router!")
+    print("No static tests - commands come from Router based on user queries.")
+    print("\nPress Ctrl+C to stop Agent 5 server...")
     
-    # Run tests
-    for i, test in enumerate(test_cases, 1):
-        print(f"\n\n{'#'*70}")
-        print(f"# {test['name']}")
-        print(f"{'#'*70}\n")
-        
-        result = await agent5.process(
-            intent=test['intent'],
-            command=test['command'],
-            target=test['target'],
-            agent_name=test['agent']
-        )
-        
-        # Save report - FIX: Ensure all objects are JSON serializable
-        report_file = f"agent5_report_{i}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-        with open(report_file, 'w') as f:
-            json.dump(result, f, indent=2, default=str)  # Add default=str to handle any remaining objects
-        
-        print(f"\n📄 Report saved to: {report_file}")
-        
-        # Pause between tests
-        if i < len(test_cases):
-            print("\nWaiting 5 seconds before next test...")
-            await asyncio.sleep(5)
+    # Keep the server running (in production, this would be the FastAPI server)
+    try:
+        while True:
+            await asyncio.sleep(1)
+    except KeyboardInterrupt:
+        print("\n\n🛑 Agent 5 server stopped.")
 
 
 if __name__ == "__main__":
