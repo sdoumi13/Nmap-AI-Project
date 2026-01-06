@@ -13,3 +13,4 @@ agent_5_validation/*.json
 .DS_Store
 Thumbs.db
 .env
+.hintrc

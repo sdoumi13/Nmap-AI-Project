@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" aria-hidden="true" role="img">
+  <defs>
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#8B5CF6;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#3B82F6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#10B981;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3B82F6;stop-opacity:0.8" />
+      <stop offset="100%" style="stop-color:#8B5CF6;stop-opacity:0.8" />
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background circle -->
+  <circle cx="128" cy="128" r="120" fill="url(#grad1)" opacity="0.1"/>
+  
+  <!-- Shield shape (Security) -->
+  <path d="M 128 40 L 80 60 L 80 120 Q 80 160 100 180 Q 120 200 128 216 Q 136 200 156 180 Q 176 160 176 120 L 176 60 Z" 
+        fill="url(#grad1)" 
+        filter="url(#glow)"
+        stroke="#8B5CF6" 
+        stroke-width="2" 
+        opacity="0.9"/>
+  
+  <!-- AI Neural Network Nodes -->
+  <circle cx="100" cy="100" r="8" fill="#3B82F6" opacity="0.9">
+    <animate attributeName="opacity" values="0.9;0.5;0.9" dur="2s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="156" cy="100" r="8" fill="#10B981" opacity="0.9">
+    <animate attributeName="opacity" values="0.9;0.5;0.9" dur="2s" begin="0.5s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="128" cy="140" r="8" fill="#8B5CF6" opacity="0.9">
+    <animate attributeName="opacity" values="0.9;0.5;0.9" dur="2s" begin="1s" repeatCount="indefinite"/>
+  </circle>
+  
+  <!-- Neural Network Connections -->
+  <line x1="100" y1="100" x2="128" y2="140" stroke="url(#grad2)" stroke-width="2" opacity="0.6"/>
+  <line x1="156" y1="100" x2="128" y2="140" stroke="url(#grad2)" stroke-width="2" opacity="0.6"/>
+  <line x1="100" y1="100" x2="156" y2="100" stroke="url(#grad2)" stroke-width="2" opacity="0.4"/>
+  
+  <!-- Lock icon (Security) -->
+  <rect x="118" y="160" width="20" height="16" rx="2" fill="#10B981" opacity="0.8"/>
+  <path d="M 128 150 L 128 160" stroke="#10B981" stroke-width="3" stroke-linecap="round" opacity="0.8"/>
+</svg>

@@ -1,0 +1,30 @@
+[
+    {
+        "id": "1",
+        "query": "nmap service detection",
+        "complexity": "Medium",
+        "status": "completed",
+        "timestamp": "2026-01-04T22:40:29.402259",
+        "target_agent": "Agent Medium (Fine-Tuned)",
+        "score": 0.562
+    },
+    {
+        "id": "2",
+        "query": "scan open ports on 192.168.1.10",
+        "complexity": "Easy",
+        "status": "completed",
+        "timestamp": "2026-01-05T23:59:46.405521",
+        "target_agent": "Agent Easy (KG-RAG)",
+        "score": 0.506
+    },
+    {
+        "id": "3",
+        "query": "Fais un scan rapide des ports sur 192.168.188.128",
+        "best_match_command": "See related ID",
+        "complexity": "Easy",
+        "status": "pending",
+        "timestamp": "2026-01-06T00:20:23.098353",
+        "target_agent": "Agent Easy (KG-RAG)",
+        "execution_report": null
+    }
+]

@@ -50,8 +50,12 @@ class MCPExecuteRequest(BaseModel):
 class MCPExecuteResponse(BaseModel):
     final_status: str
     command: str
-    stages: Dict[str, Any]
+    intent: str
+    original_command: str
+    target: str
+    agent: str
     timestamp: str
+    stages: Dict[str, Any]
 
 # ============ AGENT 5 MCP SERVER ============
 
@@ -352,12 +356,19 @@ async def mcp_execute(request: MCPExecuteRequest):
     final_status = result.get('final_status', 'unknown')
     final_command = result['stages'].get('self_correction', {}).get('final_command', request.command)
     
-    return MCPExecuteResponse(
-        final_status=final_status,
-        command=final_command,
-        stages=result['stages'],
-        timestamp=result['timestamp']
-    )
+    # Construire la réponse complète avec tous les champs nécessaires
+    response_data = {
+        "final_status": final_status,
+        "command": final_command,
+        "intent": result.get('intent', request.intent),
+        "original_command": result.get('command', request.command),
+        "target": result.get('target', request.target),
+        "agent": result.get('agent', request.agent_name),
+        "timestamp": result.get('timestamp', datetime.now().isoformat()),
+        "stages": result['stages']
+    }
+    
+    return MCPExecuteResponse(**response_data)
 
 @app.get("/health")
 def health():
