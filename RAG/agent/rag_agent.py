@@ -20,11 +20,24 @@ class NmapRagAgent:
     Execution is delegated to MCP Agent 5.
     """
     
-    def __init__(self, dataset_path: str = "nmap_dataset.json", vector_db_path: str = "./chroma_db_local"):
+    def __init__(self, dataset_path: str = None, vector_db_path: str = "./chroma_db_local"):
         
         print("[*] Initialisation du mode LOCAL (Ollama + HuggingFace)...")
+        # Définir le chemin par défaut vers nmap_dataset.json dans le répertoire RAG
+        if dataset_path is None:
+            # Essayer d'abord le chemin relatif depuis ce fichier
+            default_path = os.path.join(os.path.dirname(__file__), "..", "nmap_dataset.json")
+            # Si cela n'existe pas, chercher depuis le répertoire courant
+            if not os.path.exists(default_path):
+                default_path = os.path.join("RAG", "nmap_dataset.json")
+            # Si toujours pas trouvé, chercher à la racine du projet
+            if not os.path.exists(default_path):
+                default_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "RAG", "nmap_dataset.json"))
+            dataset_path = default_path
         self.dataset_path = dataset_path
         self.vector_db_path = vector_db_path
+        
+        print(f"[*] Dataset path: {self.dataset_path}")
         
         # 1. Embeddings Gratuits (tournent sur ton CPU)
         # "all-MiniLM-L6-v2" est très rapide et léger
@@ -123,7 +136,10 @@ class NmapRagAgent:
                 "status": "success"
             }
         except Exception as e:
-            return {"status": "error", "error_message": str(e)}
+            import traceback
+            error_msg = f"{str(e)}\n{traceback.format_exc()}"
+            print(f"  ❌ RAG Error Details: {error_msg}")
+            return {"status": "error", "error_message": error_msg}
     
     async def generate(self, user_query: str) -> str:
         """

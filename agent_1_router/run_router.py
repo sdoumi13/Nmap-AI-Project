@@ -200,12 +200,16 @@ class RouterAgent:
                 "extracted_ip": target
             })
             
-            if result['status'] == 'success':
-                return result['nmap_candidate']
+            if result.get('status') == 'success':
+                return result.get('nmap_candidate')
             else:
+                error_msg = result.get('error_message', 'Unknown error')
+                print(f"  ❌ RAG Error: {error_msg}")
                 return None
         except Exception as e:
-            print(f"  ❌ RAG Error: {e}")
+            import traceback
+            print(f"  ❌ RAG Exception: {e}")
+            print(traceback.format_exc())
             return None
     
     async def _generate_diffusion_command(self, query: str, target: str) -> str:
