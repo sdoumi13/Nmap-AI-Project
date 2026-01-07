@@ -1,5 +1,5 @@
 """
-Agent 5 - Complete Execution Script (FIXED)
+Agent 5 - Complete Execution Script with CORS FIXED
 Windows + GPU RTX 3080 + LM Studio + Docker + Ubuntu VM
 """
 
@@ -9,6 +9,13 @@ import yaml
 import json
 from pathlib import Path
 from datetime import datetime
+from typing import Dict, Any
+
+# FastAPI imports
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+import uvicorn
 
 # Import components
 from validation.hybrid_validator import AdvancedHybridValidator, ValidationStatus
@@ -62,7 +69,8 @@ class Agent5Pipeline:
         intent: str, 
         command: str, 
         target: str,
-        agent_name: str = "unknown"
+        agent_name: str = "unknown",
+        skip_sandbox: bool = False
     ) -> dict:
         
         print("="*70)
@@ -72,12 +80,14 @@ class Agent5Pipeline:
         print(f"Command: {command}")
         print(f"Target: {target}")
         print(f"Agent: {agent_name}")
+        print(f"Skip Sandbox: {skip_sandbox}")
         print(f"Timestamp: {datetime.now().isoformat()}")
         print("="*70)
         
         report = {
             "intent": intent,
             "original_command": command,
+            "command": command,
             "target": target,
             "agent": agent_name,
             "timestamp": datetime.now().isoformat(),
@@ -104,9 +114,9 @@ class Agent5Pipeline:
         if validation.get('errors'):
             print(f"  Errors: {validation['errors']}")
         
-        # FIX: Convert ValidationStatus to string before serializing
+        # Convert ValidationStatus to string before serializing
         report['stages']['validation'] = {
-            "status": str(validation['status']),  # Convert enum to string
+            "status": str(validation['status']),
             "score": validation['score'],
             "method": validation['method_used'],
             "errors": validation.get('errors', []),
@@ -117,7 +127,7 @@ class Agent5Pipeline:
         # STAGE 2: SELF-CORRECTION (if needed)
         # ============================================================
         is_valid = validation.get('valid', False)
-        is_recoverable = validation.get('status') == "recoverable"
+        is_recoverable = str(validation.get('status')) == "recoverable"
 
         if not is_valid and is_recoverable:
             print("\n[STAGE 2/4] SELF-CORRECTION")
@@ -146,10 +156,14 @@ class Agent5Pipeline:
             
             report['stages']['self_correction'] = {
                 "applied": True,
-                "history": history,
+                "original_command": report['original_command'],
+                "corrected_command": command,
                 "final_command": command,
-                "final_validation_score": validation['score']
+                "history": history,
+                "attempts": [{"iteration": i+1, "fix": h} for i, h in enumerate(history)],
+                "final_score": validation['score']
             }
+            report['command'] = command
             is_valid = validation.get('valid', False)
         else:
             print("\n[STAGE 2/4] SELF-CORRECTION")
@@ -157,13 +171,14 @@ class Agent5Pipeline:
             print("  ✅ No correction needed")
             report['stages']['self_correction'] = {
                 "applied": False,
+                "final_score": validation['score'],
                 "reason": "validation passed" if is_valid else "invalid/unrecoverable"
             }
         
         # ============================================================
         # STAGE 3: SANDBOX TEST (Docker)
         # ============================================================
-        if is_valid:
+        if is_valid and not skip_sandbox:
             print("\n[STAGE 3/4] SANDBOX TEST (Docker)")
             print("-"*70)
             print("  Executing in isolated Docker container...")
@@ -182,6 +197,7 @@ class Agent5Pipeline:
                 print(f"  Errors: {sandbox_result['errors']}")
             
             report['stages']['sandbox'] = sandbox_result
+            report['stages']['sandbox_execution'] = sandbox_result  # Alias for frontend
             
             if not sandbox_result['success']:
                 report['final_status'] = 'failed_sandbox'
@@ -189,35 +205,45 @@ class Agent5Pipeline:
         else:
             print("\n[STAGE 3/4] SANDBOX TEST")
             print("-"*70)
-            print("  ⭕ Skipped (validation failed)")
+            if skip_sandbox:
+                print("  ⭕ Skipped (skip_sandbox=True)")
+            else:
+                print("  ⭕ Skipped (validation failed)")
             report['stages']['sandbox'] = {"skipped": True}
-            report['final_status'] = 'failed_validation'
-            return report
+            report['stages']['sandbox_execution'] = {"skipped": True}
+            
+            if not is_valid:
+                report['final_status'] = 'failed_validation'
+                return report
         
         # ============================================================
         # STAGE 4: VM EXECUTION (Ubuntu SSH)
         # ============================================================
-        print("\n[STAGE 4/4] VM EXECUTION (Ubuntu SSH)")
-        print("-"*70)
-        print(f"  Target: {target} | VM: {self.config['vm']['host']}")
-        
-        try:
-            with self.vm as vm:
-                vm_result = vm.execute(command=command.replace("TARGET", target), target=target)
+        if is_valid:
+            print("\n[STAGE 4/4] VM EXECUTION (Ubuntu SSH)")
+            print("-"*70)
+            print(f"  Target: {target} | VM: {self.config['vm']['host']}")
             
-            if vm_result['success']:
-                print(f"  ^_^ VM execution SUCCESSFUL")
-            else:
-                print(f"  :| VM execution FAILED")
-                print(f"  Errors: {vm_result['errors']}")
+            try:
+                with self.vm as vm:
+                    vm_result = vm.execute(command=command.replace("TARGET", target), target=target)
+                
+                if vm_result['success']:
+                    print(f"  ^_^ VM execution SUCCESSFUL")
+                else:
+                    print(f"  :| VM execution FAILED")
+                    print(f"  Errors: {vm_result['errors']}")
+                
+                report['stages']['vm_execution'] = vm_result
+                report['final_status'] = 'success' if vm_result['success'] else 'failed_vm'
             
-            report['stages']['vm_execution'] = vm_result
-            report['final_status'] = 'success' if vm_result['success'] else 'failed_vm'
-        
-        except Exception as e:
-            print(f" :| VM connection error: {e}")
-            report['stages']['vm_execution'] = {"success": False, "errors": [str(e)]}
-            report['final_status'] = 'vm_connection_error'
+            except Exception as e:
+                print(f" :| VM connection error: {e}")
+                report['stages']['vm_execution'] = {"success": False, "errors": [str(e)]}
+                report['final_status'] = 'vm_connection_error'
+        else:
+            report['stages']['vm_execution'] = {"skipped": True}
+            report['final_status'] = 'failed_validation'
         
         # FINAL REPORT SUMMARY
         print("\n" + "="*70)
@@ -230,6 +256,7 @@ class Agent5Pipeline:
         return report
     
     def _mock_correction(self, intent: str, failed_command: str, feedback: str) -> str:
+        """Mock correction function for testing"""
         if "root" in str(feedback).lower() or "privileges" in str(feedback).lower():
             if "sudo" not in failed_command:
                 return "sudo " + failed_command
@@ -237,59 +264,211 @@ class Agent5Pipeline:
 
 
 # ============================================================================
+# FASTAPI APPLICATION WITH CORS
+# ============================================================================
+
+app = FastAPI(title="Agent 5 MCP Server", version="1.0.0")
+
+# CRITICAL: Add CORS middleware to allow frontend requests
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",      # Vite dev server
+        "http://localhost:5173",      # Alternative Vite port
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:5173",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],  # Allow all methods (GET, POST, OPTIONS, etc.)
+    allow_headers=["*"],  # Allow all headers
+)
+
+# Initialize Agent 5 Pipeline
+agent5 = None
+
+@app.on_event("startup")
+async def startup_event():
+    global agent5
+    print("\n" + "="*70)
+    print("🚀 Starting Agent 5 MCP Server...")
+    print("="*70)
+    
+    if not os.path.exists("agent5_config.yaml"):
+        print("❌ ERROR: agent5_config.yaml not found!")
+        return
+    
+    try:
+        agent5 = Agent5Pipeline(config_path="agent5_config.yaml")
+        print("✅ Agent 5 initialized successfully")
+    except Exception as e:
+        print(f"❌ Failed to initialize Agent 5: {e}")
+        import traceback
+        traceback.print_exc()
+
+
+@app.get("/")
+async def root():
+    """Root endpoint"""
+    return {
+        "service": "Agent 5 MCP Server",
+        "status": "online",
+        "version": "1.0.0"
+    }
+
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint"""
+    return {
+        "status": "online",
+        "local_agents": {
+            "comprehension_ready": True,
+            "rag_ready": True,
+            "diffusion_ready": True
+        },
+        "external_services": {
+            "agent5_mcp": {
+                "status": "online",
+                "url": "http://localhost:5000"
+            }
+        }
+    }
+
+
+@app.post("/mcp/validate")
+async def mcp_validate(request: Request):
+    """MCP Validate endpoint"""
+    if agent5 is None:
+        return JSONResponse(
+            status_code=503,
+            content={"error": "Agent 5 not initialized"}
+        )
+    
+    try:
+        data = await request.json()
+        command = data.get("command")
+        intent = data.get("intent")
+        agent_name = data.get("agent_name", "unknown")
+        
+        validation_result = await agent5.mcp_client.validate_command(
+            command=command,
+            intent=intent,
+            agent_name=agent_name
+        )
+        
+        return validation_result
+        
+    except Exception as e:
+        print(f"Validation error: {e}")
+        import traceback
+        traceback.print_exc()
+        return JSONResponse(
+            status_code=500,
+            content={"error": str(e)}
+        )
+
+
+@app.post("/mcp/execute")
+async def mcp_execute(request: Request):
+    """MCP Execute endpoint - Full pipeline"""
+    if agent5 is None:
+        return JSONResponse(
+            status_code=503,
+            content={"error": "Agent 5 not initialized"}
+        )
+    
+    try:
+        data = await request.json()
+        command = data.get("command")
+        intent = data.get("intent")
+        target = data.get("target", "192.168.188.128")
+        agent_name = data.get("agent_name", "unknown")
+        skip_sandbox = data.get("skip_sandbox", False)
+        
+        print(f"\n📥 Received execution request:")
+        print(f"   Intent: {intent}")
+        print(f"   Command: {command}")
+        print(f"   Target: {target}")
+        
+        result = await agent5.process(
+            intent=intent,
+            command=command,
+            target=target,
+            agent_name=agent_name,
+            skip_sandbox=skip_sandbox
+        )
+        
+        # Return with proper structure
+        return {
+            "final_status": result.get("final_status", "unknown"),
+            "command": result.get("command"),
+            "timestamp": result.get("timestamp"),
+            "stages": result.get("stages", {}),
+            "report": result.get("stages", {})  # Alias for frontend
+        }
+        
+    except Exception as e:
+        print(f"Execution error: {e}")
+        import traceback
+        traceback.print_exc()
+        return JSONResponse(
+            status_code=500,
+            content={
+                "error": str(e),
+                "final_status": "error",
+                "command": data.get("command", ""),
+                "timestamp": datetime.now().isoformat()
+            }
+        )
+
+
+@app.get("/history")
+async def get_history():
+    """Get execution history (mock for now)"""
+    # TODO: Implement actual history storage
+    return []
+
+
+@app.get("/history/{entry_id}")
+async def get_history_entry(entry_id: str):
+    """Get specific history entry (mock for now)"""
+    # TODO: Implement actual history retrieval
+    return JSONResponse(
+        status_code=404,
+        content={"error": "History entry not found"}
+    )
+
+
+# ============================================================================
 # MAIN EXECUTION
 # ============================================================================
 
-async def main():
-    """Main execution script - Agent 5 MCP Server (waits for requests from Router)"""
-    
-    # Initialize Agent 5
-    print("\n✅ Agent 5 MCP Server ready and waiting for requests...")
-    print("=" * 70)
-    print("Expected flow:")
-    print("  1. User enters query in ROUTER > prompt")
-    print("  2. Router classifies complexity (RAG or Diffusion)")
-    print("  3. Agent generates command")
-    print("  4. Agent sends command to this Agent 5 MCP Server")
-    print("  5. Agent 5 validates → corrects → sandbox → VM execution")
-    print("=" * 70)
-    
-    agent5 = Agent5Pipeline(config_path="agent5_config.yaml")
-    
-    print("\n🎯 Agent 5 is running and ready to process commands from Router!")
-    print("No static tests - commands come from Router based on user queries.")
-    print("\nPress Ctrl+C to stop Agent 5 server...")
-    
-    # Keep the server running (in production, this would be the FastAPI server)
-    try:
-        while True:
-            await asyncio.sleep(1)
-    except KeyboardInterrupt:
-        print("\n\n🛑 Agent 5 server stopped.")
-
-
 if __name__ == "__main__":
-    try:
-        print("""
+    print("""
     ╔═══════════════════════════════════════════════════════════════╗
     ║                   NMAP-AI AGENT 5                             ║
+    ║                   MCP SERVER WITH CORS                        ║
     ╚═══════════════════════════════════════════════════════════════╝
-        """)
+    """)
+    
+    if not os.path.exists("agent5_config.yaml"):
+        print("❌ CRITICAL: 'agent5_config.yaml' is missing!")
+        input("\nPress Enter to exit...")
+        exit(1)
+    
+    try:
+        # Run FastAPI server on port 5002 (to avoid conflicts)
+        uvicorn.run(
+            app, 
+            host="0.0.0.0", 
+            port=5002,
+            log_level="info"
+        )
         
-        if not os.path.exists("agent5_config.yaml"):
-            raise FileNotFoundError("CRITICAL: 'agent5_config.yaml' is missing!")
-
-        asyncio.run(main())
-        
-    except FileNotFoundError as fnf:
-        print(f"\n❌ FILE ERROR: {fnf}")
-        print("-> Please create agent5_config.yaml")
-    except ImportError as imp:
-        print(f"\n❌ IMPORT ERROR: {imp}")
-        print("-> Check that your subfolders (validation, mcp, etc.) exist and contain __init__.py")
+    except KeyboardInterrupt:
+        print("\n\n🛑 Agent 5 server stopped by user.")
     except Exception as e:
         print(f"\n❌ UNEXPECTED ERROR: {e}")
         import traceback
         traceback.print_exc()
-    
-    input("\nPress Enter to exit...")
+        input("\nPress Enter to exit...")

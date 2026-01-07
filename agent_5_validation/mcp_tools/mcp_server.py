@@ -1,13 +1,9 @@
-"""
-mcp_tools/mcp_server.py
-Agent 5 - MCP Server avec Auto-Correction Intégrée
-"""
-
 import sys
 import os
 from pathlib import Path
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware  # Added missing import
 from pydantic import BaseModel
 from typing import Dict, Any, Optional, List
 from datetime import datetime
@@ -19,6 +15,7 @@ parent_dir = current_dir.parent
 if str(parent_dir) not in sys.path:
     sys.path.insert(0, str(parent_dir))
 
+# Note: Ensure these modules exist in your project structure
 from validation.hybrid_validator import AdvancedHybridValidator, ValidationStatus
 from execution.sandbox_executor import SandboxExecutor
 from execution.vm_executor import VMExecutor
@@ -64,29 +61,35 @@ class Agent5MCPServer:
         if config_path is None:
             config_path = parent_dir / "agent5_config.yaml"
         
-        if not os.path.exists(config_path):
-            print(f"⚠️ Config not found: {config_path}. Using defaults.")
-            self.config = self._default_config()
-        else:
-            with open(config_path, 'r') as f:
-                self.config = yaml.safe_load(f)
+        self.config = self._load_config(config_path)
         
         print("🔧 Initializing Agent 5 MCP Server...")
         
         val_settings = self.config.get('validation', {})
-        api_url = val_settings.get('mistral_api_url', 'http://localhost:1234/v1/chat/completions')
+        api_url = val_settings.get('mistral_api_url', 'http://192.168.11.1:1234/v1/chat/completions')
         self.max_retries = val_settings.get('max_retries', 3)
-
+        
         self.validator = AdvancedHybridValidator(mistral_api_url=api_url)
         self.sandbox = SandboxExecutor()
         self.vm = VMExecutor(self.config.get('vm', {}))
         
         print("✅ Agent 5 MCP Server ready\n")
 
+    def _load_config(self, path):
+        if not os.path.exists(path):
+            print(f"⚠️ Config not found: {path}. Using defaults.")
+            return self._default_config()
+        try:
+            with open(path, 'r') as f:
+                return yaml.safe_load(f) or self._default_config()
+        except Exception as e:
+            print(f"❌ Error loading YAML: {e}. Using defaults.")
+            return self._default_config()
+
     def _default_config(self):
         return {
             'validation': {
-                'mistral_api_url': 'http://localhost:1234/v1/chat/completions',
+                'mistral_api_url': 'http://192.168.11.1:1234/v1/chat/completions',
                 'max_retries': 3
             },
             'vm': {
@@ -114,12 +117,15 @@ class Agent5MCPServer:
             agent_name=agent_name
         )
         
+        # Ensure we handle the Enum vs String logic correctly
+        status_val = validation.status.value if hasattr(validation.status, 'value') else validation.status
+        
         return {
-            "valid": validation.status == ValidationStatus.VALID,
-            "status": str(validation.status.value),
+            "valid": status_val == "valid" or status_val == ValidationStatus.VALID,
+            "status": str(status_val),
             "score": int(validation.final_score),
-            "errors": validation.semantic_errors,
-            "warnings": validation.suggestions,
+            "errors": getattr(validation, 'semantic_errors', []),
+            "warnings": getattr(validation, 'suggestions', []),
             "method_used": "hybrid_semantic_llm",
             "timestamp": datetime.now().isoformat()
         }
@@ -140,212 +146,121 @@ class Agent5MCPServer:
             "target": target,
             "agent": agent_name,
             "timestamp": datetime.now().isoformat(),
-            "final_status": "unknown",  # Initialize final_status
+            "final_status": "unknown",
             "stages": {}
         }
         
-        print(f"\n{'='*70}")
-        print(f"MCP PIPELINE: {agent_name}")
-        print(f"Command: {command}")
-        print(f"Intent: {intent}")
-        print(f"{'='*70}")
+        print(f"\n{'='*70}\nMCP PIPELINE: {agent_name}\nCommand: {command}\n{'='*70}")
         
         # ========== STAGE 1: VALIDATION ==========
-        print("\n[STAGE 1/4] VALIDATION")
         v_res = await self.validate_command(command, intent, agent_name)
         report['stages']['validation'] = v_res
-        
-        print(f"  Status: {v_res['status']}")
-        print(f"  Score: {v_res['score']}/100")
-        if v_res['errors']:
-            print(f"  Errors: {v_res['errors']}")
         
         # ========== STAGE 2: AUTO-CORRECTION ==========
         correction_applied = False
         retry_count = 0
         
         while not v_res['valid'] and retry_count < self.max_retries:
-            print(f"\n[STAGE 2/4] AUTO-CORRECTION (Attempt {retry_count + 1}/{self.max_retries})")
-            
+            print(f"\n[STAGE 2] AUTO-CORRECTION (Attempt {retry_count + 1}/{self.max_retries})")
             corrected_cmd = self._auto_correct(command, v_res['errors'])
             
             if corrected_cmd == command:
-                print("  ⚠️ No correction possible, stopping")
                 break
-            
-            print(f"  Original: {command}")
-            print(f"  Corrected: {corrected_cmd}")
             
             command = corrected_cmd
             correction_applied = True
-            
-            # Re-validate
-            v_res = await self.validate_command(command, intent, f"{agent_name}-corrected-{retry_count+1}")
-            print(f"  New Score: {v_res['score']}/100")
-            
+            v_res = await self.validate_command(command, intent, f"{agent_name}-retry-{retry_count+1}")
             retry_count += 1
         
         report['stages']['self_correction'] = {
             "applied": correction_applied,
-            "original_command": report['command'],
-            "attempts": retry_count,
             "final_command": command,
-            "final_score": v_res['score']
+            "attempts": retry_count
         }
-        
-        # ========== STAGE 3: SANDBOX TEST ==========
-        if v_res['valid']:
-            if not skip_sandbox:
-                print("\n[STAGE 3/4] SANDBOX TEST")
-                
-                sandbox_result = await self.sandbox.execute(
-                    command=command.replace("TARGET", target),
-                    timeout=self.config.get('docker', {}).get('timeout', 60)
-                )
-                
-                report['stages']['sandbox'] = sandbox_result
-                
-                if sandbox_result['success']:
-                    print(f"  ✅ Sandbox PASSED")
-                else:
-                    print(f"  ❌ Sandbox FAILED: {sandbox_result['errors']}")
-                    report['final_status'] = 'failed_sandbox'
-                    return report
-            else:
-                print("\n[STAGE 3/4] SANDBOX TEST - SKIPPED")
-                report['stages']['sandbox'] = {"skipped": True}
-        else:
-            print("\n[STAGE 3/4] SANDBOX TEST - SKIPPED (validation failed)")
-            report['stages']['sandbox'] = {"skipped": True, "reason": "validation_failed"}
+
+        if not v_res['valid']:
             report['final_status'] = 'failed_validation'
             return report
         
-        # ========== STAGE 4: VM EXECUTION ==========
-        print("\n[STAGE 4/4] VM EXECUTION")
+        # ========== STAGE 3: SANDBOX TEST ==========
+        if not skip_sandbox:
+            sandbox_result = await self.sandbox.execute(
+                command=command.replace("TARGET", target),
+                timeout=self.config.get('docker', {}).get('timeout', 60)
+            )
+            report['stages']['sandbox'] = sandbox_result
+            if not sandbox_result.get('success'):
+                report['final_status'] = 'failed_sandbox'
+                return report
         
+        # ========== STAGE 4: VM EXECUTION ==========
         try:
+            # Using context manager for VM connection
             with self.vm as vm:
                 vm_result = vm.execute(
                     command=command.replace("TARGET", target),
                     target=target
                 )
-            
             report['stages']['vm_execution'] = vm_result
-            
-            if vm_result['success']:
-                print(f"  ✅ VM Execution SUCCESS")
-                report['final_status'] = 'success'
-            else:
-                print(f"  ❌ VM Execution FAILED")
-                report['final_status'] = 'failed_vm'
-        
+            report['final_status'] = 'success' if vm_result.get('success') else 'failed_vm'
         except Exception as e:
-            print(f"  ❌ VM Connection Error: {e}")
-            report['stages']['vm_execution'] = {"success": False, "errors": [str(e)]}
             report['final_status'] = 'vm_connection_error'
-        
-        print(f"\n{'='*70}")
-        print(f"FINAL STATUS: {report['final_status']}")
-        print(f"{'='*70}\n")
+            report['stages']['vm_execution'] = {"success": False, "errors": [str(e)]}
         
         return report
 
     def _auto_correct(self, cmd: str, errors: List[str]) -> str:
-        """Auto-correction intelligente basée sur les erreurs détectées"""
         corrected = cmd.strip()
+        err_str = str(errors).lower()
         
-        # Détection: besoin de privilèges root
-        needs_root = any(
-            keyword in str(errors).lower() 
-            for keyword in ["root", "privilege", "permission", "denied"]
-        )
-        
-        if needs_root:
-            # Option 1: Ajouter sudo si absent
+        # Logic: Root privileges
+        if any(k in err_str for k in ["root", "privilege", "permission"]):
             if not corrected.startswith("sudo"):
-                print("    → Adding 'sudo' prefix")
                 corrected = "sudo " + corrected
-            
-            # Option 2: Remplacer les scans nécessitant root
-            else:
-                # -sS → -sT (TCP connect scan, no root needed)
-                if "-sS" in corrected:
-                    print("    → Replacing -sS with -sT (no root needed)")
-                    corrected = corrected.replace("-sS", "-sT")
-                
-                # Supprimer -O (OS detection needs root)
-                if "-O" in corrected:
-                    print("    → Removing -O (OS detection needs root)")
-                    corrected = corrected.replace("-O", "")
-                    corrected = " ".join(corrected.split())  # Clean double spaces
+            elif "-sS" in corrected:
+                corrected = corrected.replace("-sS", "-sT")
         
-        # Correction: Target manquant
-        if "TARGET" not in corrected and "target" in str(errors).lower():
-            print("    → Adding TARGET placeholder")
+        # Logic: Placeholder missing
+        if "target" in err_str and "TARGET" not in corrected:
             corrected += " TARGET"
-        
-        # Correction: Syntaxe nmap
-        if corrected.startswith("nmap"):
-            # Remove duplicate flags
-            parts = corrected.split()
-            seen = set()
-            cleaned = []
-            for part in parts:
-                if part.startswith("-") and part in seen:
-                    continue
-                seen.add(part)
-                cleaned.append(part)
-            corrected = " ".join(cleaned)
-        
-        return corrected.strip()
-
+            
+        return corrected
 
 # ============ FASTAPI APP ============
 
-agent5 = None
+agent5_instance = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Lifespan manager (replaces deprecated on_event)"""
-    global agent5
-    try:
-        print("🚀 Starting Agent 5 MCP Server...")
-        agent5 = Agent5MCPServer()
-        print("✅ MCP Server ready on http://0.0.0.0:5000")
-    except Exception as e:
-        print(f"❌ Critical error: {e}")
+    global agent5_instance
+    print("🚀 Starting Agent 5 MCP Server...")
+    agent5_instance = Agent5MCPServer()
     yield
     print("👋 Shutting down MCP Server")
 
-app = FastAPI(
-    lifespan=lifespan,
-    title="Agent 5 MCP Server",
-    version="2.0",
-    description="Validation, Auto-Correction, Sandbox & VM Execution"
+app = FastAPI(lifespan=lifespan, title="Agent 5 MCP Server")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 @app.post("/mcp/validate", response_model=MCPValidateResponse)
 async def mcp_validate(request: MCPValidateRequest):
-    """Endpoint: Validation seule"""
-    if not agent5:
+    if not agent5_instance:
         raise HTTPException(status_code=503, detail="Agent not ready")
-    
-    result = await agent5.validate_command(
-        command=request.command,
-        intent=request.intent,
-        agent_name=request.agent_name,
-        context=request.context
-    )
-    
+    result = await agent5_instance.validate_command(request.command, request.intent, request.agent_name)
     return MCPValidateResponse(**result)
 
 @app.post("/mcp/execute", response_model=MCPExecuteResponse)
 async def mcp_execute(request: MCPExecuteRequest):
-    """Endpoint: Pipeline complet (Validation + Correction + Sandbox + VM)"""
-    if not agent5:
+    if not agent5_instance:
         raise HTTPException(status_code=503, detail="Agent not ready")
     
-    result = await agent5.execute_pipeline(
+    result = await agent5_instance.execute_pipeline(
         command=request.command,
         intent=request.intent,
         target=request.target,
@@ -353,31 +268,17 @@ async def mcp_execute(request: MCPExecuteRequest):
         skip_sandbox=request.skip_sandbox
     )
     
-    # Ensure final_status is always present
-    final_status = result.get('final_status', 'unknown')
-    final_command = result['stages'].get('self_correction', {}).get('final_command', request.command)
-    
-    # Construire la réponse complète avec tous les champs nécessaires
-    response_data = {
-        "final_status": final_status,
-        "command": final_command,
-        "intent": result.get('intent', request.intent),
-        "original_command": result.get('command', request.command),
-        "target": result.get('target', request.target),
-        "agent": result.get('agent', request.agent_name),
-        "timestamp": result.get('timestamp', datetime.now().isoformat()),
-        "stages": result['stages']
-    }
-    
-    return MCPExecuteResponse(**response_data)
-
-@app.get("/health")
-def health():
-    """Health check endpoint"""
-    return {
-        "status": "ok" if agent5 else "initializing",
-        "timestamp": datetime.now().isoformat()
-    }
+    # Map report to the Pydantic response model
+    return MCPExecuteResponse(
+        final_status=result['final_status'],
+        command=result['stages'].get('self_correction', {}).get('final_command', request.command),
+        intent=request.intent,
+        original_command=request.command,
+        target=request.target,
+        agent=request.agent_name,
+        timestamp=result['timestamp'],
+        stages=result['stages']
+    )
 
 if __name__ == "__main__":
     import uvicorn

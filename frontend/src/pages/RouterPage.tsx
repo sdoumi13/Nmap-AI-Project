@@ -22,7 +22,8 @@ export default function RouterPage() {
     setCurrentStep('analyzing');
 
     try {
-      const result = await analyzeApi.analyze(query, target);
+      // FIXED: Call analyzeApi directly (it's a function, not an object)
+      const result = await analyzeApi({ query, target });
       setAnalyzeResult(result);
       setCurrentStep('analyzed');
     } catch (err) {
@@ -95,113 +96,78 @@ export default function RouterPage() {
         </p>
       </div>
 
-      {/* Input Form - Enhanced with animations */}
-      <div className="bg-gradient-to-br from-slate-900/95 via-slate-900/90 to-slate-900/95 border border-slate-800/50 rounded-2xl p-8 shadow-2xl relative overflow-hidden animate-fade-in-up group">
-        {/* Animated background gradient */}
+      {/* Input Form */}
+      <div className="bg-gradient-to-br from-slate-900/95 via-slate-900/90 to-slate-900/95 border border-slate-800/50 rounded-2xl p-8 shadow-2xl relative overflow-hidden group">
         <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 via-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-        
-        {/* Shimmer effect */}
-        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-        </div>
 
         <form onSubmit={handleAnalyze} className="space-y-6 relative z-10">
-          {/* Query Input - Enhanced */}
-          <div className="space-y-2 animate-fade-in-up animate-stagger-1">
+          {/* Query Input */}
+          <div className="space-y-2">
             <label htmlFor="query" className="flex items-center gap-2 text-sm font-semibold text-slate-300 uppercase tracking-wider">
               <div className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
               Requête utilisateur
             </label>
-            <div className="relative">
-              <textarea
-                id="query"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Ex: Scan les ports ouverts sur la machine cible"
-                className="w-full px-5 py-4 bg-slate-800/60 border-2 border-slate-700/50 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all duration-300 font-mono text-sm resize-none backdrop-blur-sm hover:border-slate-600/70 hover:bg-slate-800/70"
-                rows={5}
-                required
-                disabled={loading}
-              />
-              {/* Animated border on focus */}
-              <div className="absolute inset-0 rounded-xl border-2 border-purple-500/0 pointer-events-none transition-all duration-300 focus-within:border-purple-500/30" />
-            </div>
+            <textarea
+              id="query"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Ex: Scan les ports ouverts sur la machine cible"
+              className="w-full px-5 py-4 bg-slate-800/60 border-2 border-slate-700/50 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all duration-300 font-mono text-sm resize-none"
+              rows={5}
+              required
+              disabled={loading}
+            />
             {query && (
-              <p className="text-xs text-slate-500 flex items-center gap-1 animate-fade-in">
+              <p className="text-xs text-slate-500 flex items-center gap-1">
                 <span className="w-1 h-1 rounded-full bg-emerald-400" />
                 {query.length} caractères
               </p>
             )}
           </div>
 
-          {/* Target Input - Enhanced */}
-          <div className="space-y-2 animate-fade-in-up animate-stagger-2">
+          {/* Target Input */}
+          <div className="space-y-2">
             <label htmlFor="target" className="flex items-center gap-2 text-sm font-semibold text-slate-300 uppercase tracking-wider">
               <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
               Cible (IP)
             </label>
-            <div className="relative">
-              <input
-                id="target"
-                type="text"
-                value={target}
-                onChange={(e) => setTarget(e.target.value)}
-                placeholder="192.168.188.128"
-                className="w-full px-5 py-4 bg-slate-800/60 border-2 border-slate-700/50 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-300 font-mono backdrop-blur-sm hover:border-slate-600/70 hover:bg-slate-800/70"
-                required
-                disabled={loading}
-              />
-              {/* Animated border on focus */}
-              <div className="absolute inset-0 rounded-xl border-2 border-blue-500/0 pointer-events-none transition-all duration-300 focus-within:border-blue-500/30" />
-            </div>
-            {target && (
-              <p className="text-xs text-slate-500 flex items-center gap-1 animate-fade-in">
-                <span className="w-1 h-1 rounded-full bg-emerald-400" />
-                IP cible configurée
-              </p>
-            )}
+            <input
+              id="target"
+              type="text"
+              value={target}
+              onChange={(e) => setTarget(e.target.value)}
+              placeholder="192.168.188.128"
+              className="w-full px-5 py-4 bg-slate-800/60 border-2 border-slate-700/50 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-300 font-mono"
+              required
+              disabled={loading}
+            />
           </div>
 
-          {/* Submit Button - Enhanced */}
-          <div className="pt-2 animate-fade-in-up animate-stagger-3">
-            <button
-              type="submit"
-              disabled={loading || !query.trim()}
-              className="w-full px-8 py-4 bg-gradient-to-r from-purple-600 via-purple-500 to-blue-600 text-white font-bold rounded-xl hover:from-purple-700 hover:via-purple-600 hover:to-blue-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 shadow-lg shadow-purple-500/20 hover:shadow-purple-500/40 hover:scale-[1.02] active:scale-[0.98] relative overflow-hidden group/btn"
-            >
-              {/* Button shimmer effect */}
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-700" />
-              
-              {/* Button content */}
-              <div className="relative z-10 flex items-center gap-3">
-                {loading ? (
-                  <>
-                    <Loader2 className="w-6 h-6 animate-spin" />
-                    <span className="text-base">Analyse en cours...</span>
-                  </>
-                ) : (
-                  <>
-                    <Brain className="w-6 h-6 group-hover/btn:rotate-12 transition-transform duration-300" />
-                    <span className="text-base">Analyser et Générer</span>
-                    <ArrowRight className="w-5 h-5 opacity-0 group-hover/btn:opacity-100 group-hover/btn:translate-x-1 transition-all duration-300" />
-                  </>
-                )}
-              </div>
-            </button>
-            
-            {/* Helper text */}
-            {!query.trim() && (
-              <p className="text-xs text-slate-500 text-center mt-3 animate-fade-in">
-                Entrez votre requête pour commencer l'analyse
-              </p>
+          {/* Submit Button */}
+          <button
+            type="submit"
+            disabled={loading || !query.trim()}
+            className="w-full px-8 py-4 bg-gradient-to-r from-purple-600 via-purple-500 to-blue-600 text-white font-bold rounded-xl hover:from-purple-700 hover:via-purple-600 hover:to-blue-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 shadow-lg"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-6 h-6 animate-spin" />
+                <span>Analyse en cours...</span>
+              </>
+            ) : (
+              <>
+                <Brain className="w-6 h-6" />
+                <span>Analyser et Générer</span>
+                <ArrowRight className="w-5 h-5" />
+              </>
             )}
-          </div>
+          </button>
         </form>
       </div>
 
       {/* Error Display */}
       {error && (
-        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4">
+        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 animate-fade-in">
           <div className="flex items-start gap-3">
             <XCircle className="w-5 h-5 text-red-400 mt-0.5" />
             <div className="flex-1">
@@ -212,12 +178,10 @@ export default function RouterPage() {
         </div>
       )}
 
-      {/* Analysis Result - Enhanced */}
+      {/* Analysis Result */}
       {analyzeResult && (
-        <div className="space-y-4 animate-fade-in-up">
-          <div className="bg-gradient-to-br from-slate-900/95 via-slate-900/90 to-slate-900/95 border border-slate-800/50 rounded-2xl p-6 shadow-2xl relative overflow-hidden group">
-            {/* Animated background */}
-            <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 via-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+        <div className="space-y-4 animate-fade-in">
+          <div className="bg-gradient-to-br from-slate-900/95 via-slate-900/90 to-slate-900/95 border border-slate-800/50 rounded-2xl p-6 shadow-2xl">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-white flex items-center gap-2">
                 <CheckCircle className="w-6 h-6 text-emerald-400" />
@@ -236,49 +200,38 @@ export default function RouterPage() {
               </div>
             ) : (
               <div className="space-y-4">
-                {/* Complexity & Agent - Enhanced */}
+                {/* Complexity & Agent */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-gradient-to-br from-slate-800/60 to-slate-800/40 rounded-xl p-5 border border-slate-700/50 hover:border-purple-500/30 transition-all duration-300 hover-lift relative overflow-hidden group/card">
-                    <div className="absolute inset-0 bg-gradient-to-r from-purple-500/0 via-purple-500/5 to-purple-500/0 opacity-0 group-hover/card:opacity-100 transition-opacity duration-300" />
-                    <div className="relative z-10">
-                      <p className="text-xs text-slate-400 mb-2 uppercase tracking-wider">Complexité</p>
-                      <p className="text-2xl font-bold text-white mb-1">{analyzeResult.analysis.level}</p>
-                      <p className="text-xs text-slate-500 mt-1">{analyzeResult.analysis.reason}</p>
-                    </div>
+                  <div className="bg-slate-800/40 rounded-xl p-5 border border-slate-700/50">
+                    <p className="text-xs text-slate-400 mb-2 uppercase tracking-wider">Complexité</p>
+                    <p className="text-2xl font-bold text-white mb-1">{analyzeResult.analysis.level}</p>
+                    <p className="text-xs text-slate-500 mt-1">{analyzeResult.analysis.reason}</p>
                   </div>
-                  <div className="bg-gradient-to-br from-slate-800/60 to-slate-800/40 rounded-xl p-5 border border-slate-700/50 hover:border-blue-500/30 transition-all duration-300 hover-lift relative overflow-hidden group/card">
-                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 via-blue-500/5 to-blue-500/0 opacity-0 group-hover/card:opacity-100 transition-opacity duration-300" />
-                    <div className="relative z-10">
-                      <p className="text-xs text-slate-400 mb-2 uppercase tracking-wider">Agent sélectionné</p>
-                      <div className="flex items-center gap-3 mb-1">
-                        {(() => {
-                          const Icon = getAgentIcon(analyzeResult.analysis.target_agent);
-                          return <Icon className={`w-6 h-6 ${getAgentColor(analyzeResult.analysis.target_agent)} group-hover/card:scale-110 transition-transform duration-300`} />;
-                        })()}
-                        <p className="text-2xl font-bold text-white">{analyzeResult.analysis.target_agent}</p>
-                      </div>
-                      <p className="text-xs text-slate-500 mt-1">
-                        {analyzeResult.generation_method === 'RAG' ? 'Génération via RAG' : 'Génération via Diffusion'}
-                      </p>
+                  <div className="bg-slate-800/40 rounded-xl p-5 border border-slate-700/50">
+                    <p className="text-xs text-slate-400 mb-2 uppercase tracking-wider">Agent sélectionné</p>
+                    <div className="flex items-center gap-3 mb-1">
+                      {(() => {
+                        const Icon = getAgentIcon(analyzeResult.analysis.target_agent);
+                        return <Icon className={`w-6 h-6 ${getAgentColor(analyzeResult.analysis.target_agent)}`} />;
+                      })()}
+                      <p className="text-2xl font-bold text-white">{analyzeResult.analysis.target_agent}</p>
                     </div>
+                    <p className="text-xs text-slate-500 mt-1">
+                      {analyzeResult.generation_method === 'RAG' ? 'Génération via RAG' : 'Génération via Diffusion'}
+                    </p>
                   </div>
                 </div>
 
-                {/* Generated Command - Enhanced */}
+                {/* Generated Command */}
                 {analyzeResult.generated_command && (
-                  <div className="bg-gradient-to-br from-slate-800/60 to-slate-800/40 rounded-xl p-5 border border-slate-700/50 hover:border-emerald-500/30 transition-all duration-300 relative overflow-hidden group/cmd">
-                    <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/0 via-emerald-500/5 to-emerald-500/0 opacity-0 group-hover/cmd:opacity-100 transition-opacity duration-300" />
-                    <div className="relative z-10">
-                      <p className="text-xs text-slate-400 mb-3 uppercase tracking-wider flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                        Commande générée
-                      </p>
-                      <div className="flex items-center gap-2">
-                        <code className="flex-1 text-sm text-slate-200 font-mono bg-slate-900/70 px-4 py-3 rounded-lg border border-slate-700/50 hover:border-emerald-500/30 transition-all duration-300">
-                          {analyzeResult.generated_command}
-                        </code>
-                      </div>
-                    </div>
+                  <div className="bg-slate-800/40 rounded-xl p-5 border border-slate-700/50">
+                    <p className="text-xs text-slate-400 mb-3 uppercase tracking-wider flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      Commande générée
+                    </p>
+                    <code className="block text-sm text-slate-200 font-mono bg-slate-900/70 px-4 py-3 rounded-lg border border-slate-700/50">
+                      {analyzeResult.generated_command}
+                    </code>
                   </div>
                 )}
 
@@ -289,20 +242,17 @@ export default function RouterPage() {
                     disabled={loading || !analyzeResult.generated_command}
                     className="w-full px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold rounded-xl hover:from-emerald-700 hover:to-teal-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
-                    <div className="relative z-10 flex items-center gap-3">
-                      {loading ? (
-                        <>
-                          <Loader2 className="w-6 h-6 animate-spin" />
-                          <span className="text-base">Exécution en cours...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Play className="w-6 h-6 group-hover/exec:scale-110 transition-transform duration-300" />
-                          <span className="text-base">Exécuter avec Agent 5 (Validation + Sandbox + VM)</span>
-                          <ArrowRight className="w-5 h-5 opacity-0 group-hover/exec:opacity-100 group-hover/exec:translate-x-1 transition-all duration-300" />
-                        </>
-                      )}
-                    </div>
+                    {loading ? (
+                      <>
+                        <Loader2 className="w-6 h-6 animate-spin" />
+                        <span>Exécution en cours...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Play className="w-6 h-6" />
+                        <span>Exécuter avec Agent 5 (Validation + Sandbox + VM)</span>
+                      </>
+                    )}
                   </button>
                 )}
               </div>
@@ -313,7 +263,7 @@ export default function RouterPage() {
 
       {/* Execution Result */}
       {executionResult && (
-        <div className="bg-slate-900/90 border border-slate-800/50 rounded-2xl p-6 shadow-xl">
+        <div className="bg-slate-900/90 border border-slate-800/50 rounded-2xl p-6 shadow-xl animate-fade-in">
           <h2 className="text-xl font-bold text-white flex items-center gap-2 mb-4">
             <Play className="w-6 h-6 text-blue-400" />
             Résultat de l'Exécution
@@ -342,6 +292,7 @@ export default function RouterPage() {
 
             {/* Execution Stages */}
             <div className="space-y-3">
+              {/* Validation Stage */}
               {executionResult.stages.validation && (
                 <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
                   <p className="text-xs text-slate-400 mb-1">Validation</p>
@@ -350,25 +301,35 @@ export default function RouterPage() {
                 </div>
               )}
 
+              {/* Self-Correction Stage */}
               {executionResult.stages.self_correction && executionResult.stages.self_correction.applied && (
                 <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
                   <p className="text-xs text-slate-400 mb-1">Auto-correction</p>
-                  <p className="text-sm text-white">Commande corrigée: {executionResult.stages.self_correction.final_command}</p>
-                  {executionResult.stages.self_correction.history && (
-                    <p className="text-xs text-slate-500">Historique: {executionResult.stages.self_correction.history.length} tentatives</p>
+                  <p className="text-sm text-white">
+                    Commande corrigée: {executionResult.stages.self_correction.final_command || executionResult.stages.self_correction.corrected_command}
+                  </p>
+                  {(executionResult.stages.self_correction.history || executionResult.stages.self_correction.attempts) && (
+                    <p className="text-xs text-slate-500">
+                      Historique: {(executionResult.stages.self_correction.history?.length || executionResult.stages.self_correction.attempts?.length || 0)} tentatives
+                    </p>
                   )}
                 </div>
               )}
 
-              {executionResult.stages.sandbox && (
-                <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
-                  <p className="text-xs text-slate-400 mb-1">Sandbox Test</p>
-                  <p className={`text-sm ${executionResult.stages.sandbox.success ? 'text-emerald-400' : 'text-red-400'}`}>
-                    {executionResult.stages.sandbox.success ? '✅ Réussi' : '❌ Échoué'}
-                  </p>
-                </div>
-              )}
+              {/* Sandbox Stage - Handle both 'sandbox' and 'sandbox_execution' */}
+              {(executionResult.stages.sandbox || executionResult.stages.sandbox_execution) && (() => {
+                const sandbox = executionResult.stages.sandbox || executionResult.stages.sandbox_execution!;
+                return (
+                  <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
+                    <p className="text-xs text-slate-400 mb-1">Sandbox Test</p>
+                    <p className={`text-sm ${sandbox.success ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {sandbox.success ? '✅ Réussi' : '❌ Échoué'}
+                    </p>
+                  </div>
+                );
+              })()}
 
+              {/* VM Execution Stage */}
               {executionResult.stages.vm_execution && (
                 <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
                   <p className="text-xs text-slate-400 mb-1">Exécution VM</p>
@@ -398,4 +359,3 @@ export default function RouterPage() {
     </div>
   );
 }
-

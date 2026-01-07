@@ -1,319 +1,349 @@
-const API_BASE_URL = 'http://localhost:8000/api';
+// src/services/api.ts - FIXED VERSION
 
-// --- INTERFACES POUR LE RAPPORT D'EXÉCUTION (AGENT 5) ---
+const API_BASE_URL = 'http://localhost:8001';
+const HISTORY_URL = 'http://localhost:5002'; // Agent 5 MCP Server - UPDATED PORT
+const HEALTH_URL = 'http://localhost:5002'; // Health endpoint - UPDATED PORT
 
-export interface ExecutionStage {
-  success?: boolean;
-  status?: string;
-  output?: string;
-  errors?: string[];
-  time?: number;
-  [key: string]: string | number | boolean | object | undefined; // Pour la flexibilité des métadonnées
-}
-
-export interface ExecutionReport {
-  final_status: 'success' | 'failed_validation' | 'failed_sandbox' | 'failed_vm' | 'vm_connection_error';
-  intent: string;
-  original_command: string;
-  target: string;
-  agent: string;
-  timestamp: string;
-  stages: {
-    validation?: {
-      status: string;
-      score: number;
-      method: string;
-      errors?: string[];
-    };
-    self_correction?: {
-      applied: boolean;
-      final_command?: string;
-      history?: string[];
-    };
-    sandbox?: ExecutionStage;
-    vm_execution?: ExecutionStage & { exit_code?: number };
-  };
-}
-
-// --- INTERFACE PRINCIPALE DE L'HISTORIQUE ---
+// ============================================================================
+// TYPE DEFINITIONS
+// ============================================================================
 
 export interface HistoryEntry {
   id: string;
   query: string;
-  best_match_command?: string;
-  generated_command?: string;
-  generation_method?: string;
-  complexity: string;
-  status: 'completed' | 'failed' | 'pending' | 'running';
   timestamp: string;
-  target_agent?: string;
-  execution_report?: ExecutionReport | null; // Contiendra tout le détail de l'Agent 5
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  target_agent: string | null;
+  generated_command: string | null;
+  generation_method: string | null;
+  execution_report: any | null;
 }
 
-// --- RÉPONSES DES ENDPOINTS ---
+export interface ComplexityAnalysis {
+  level: 'Easy' | 'Medium' | 'Hard';
+  confidence: number;
+  reason: string;
+  target_agent: string;
+}
 
 export interface AnalyzeResponse {
+  status: string;
   relevant: boolean;
-  entry_id: string; // Crucial pour l'étape d'exécution
-  best_match_command?: string;
-  generated_command?: string;
-  generation_method?: string;
-  analysis: {
-    level: string;
-    target_agent: string;
-    confidence?: number;
-    reason: string;
-  };
-  status?: string;
   reason?: string;
+  analysis: ComplexityAnalysis;
+  generated_command?: string;
+  best_match_command?: string;
+  generation_method?: string;
+  entry_id?: string;
 }
 
-// --- SERVICES API ---
+export interface ValidationResult {
+  valid: boolean;
+  score: number;
+  status: string;
+  method: string;
+  errors: string[];
+  warnings: string[];
+}
 
-/**
- * Agent 1: Analyse de la requête et détermination de la complexité
- */
-export const analyzeApi = {
-  analyze: async (query: string, target?: string): Promise<AnalyzeResponse> => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/analyze`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          query,
-          target: target || '192.168.188.128'
-        }),
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || errorData.message || `Erreur HTTP ${response.status}: Erreur lors de l'analyse IA`);
-      }
-      
-      return await response.json();
-    } catch (error) {
-      if (error instanceof TypeError && error.message.includes('fetch')) {
-        throw new Error('Erreur de connexion: Impossible d\'atteindre le serveur API');
-      }
-      throw error;
-    }
-  }
-};
-
-/**
- * Agent 5: Validation seule d'une commande
- */
-export const validationApi = {
-  validate: async (data: {
-    entry_id: string;
-    intent: string;
-    command: string;
-    agent_name: string;
-  }): Promise<{
-    valid: boolean;
+export interface ExecutionStages {
+  validation?: {
     status: string;
     score: number;
-    errors: string[];
-    warnings: string[];
-    method_used: string;
-    timestamp: string;
-  }> => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/validate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          entry_id: data.entry_id,
-          intent: data.intent,
-          command: data.command,
-          agent_name: data.agent_name,
-          target: '192.168.188.128' // Required by backend but not used for validation
-        }),
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || errorData.message || `Erreur HTTP ${response.status}: Échec de la validation`);
-      }
-      
-      return await response.json();
-    } catch (error) {
-      if (error instanceof TypeError && error.message.includes('fetch')) {
-        throw new Error('Erreur de connexion: Impossible d\'atteindre le serveur API');
-      }
-      throw error;
-    }
-  }
-};
-
-/**
- * Agent 5: Validation, Sandbox et Exécution finale sur VM
- */
-export const executionApi = {
-  execute: async (data: {
-    entry_id: string;
-    intent: string;
+    method: string;
+    errors?: string[];
+  };
+  self_correction?: {
+    applied: boolean;
+    original_command?: string;
+    corrected_command?: string;
+    final_command?: string;
+    final_score?: number;
+    attempts?: any[];
+    history?: any[];
+  };
+  sandbox_execution?: {
+    success: boolean;
+    command: string;
+    exit_code: number;
+    output: string;
+    runtime: number;
+  };
+  sandbox?: {
+    success: boolean;
+    command: string;
+    exit_code: number;
+    output: string;
+    runtime: number;
+  };
+  vm_execution?: {
+    success: boolean;
     command: string;
     target: string;
-    agent_name: string;
-  }): Promise<ExecutionReport> => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/execute`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || errorData.message || `Erreur HTTP ${response.status}: Échec du pipeline d'exécution`);
-      }
-      
-      return await response.json();
-    } catch (error) {
-      if (error instanceof TypeError && error.message.includes('fetch')) {
-        throw new Error('Erreur de connexion: Impossible d\'atteindre le serveur API');
-      }
-      throw error;
-    }
-  }
-};
+    exit_code: number;
+    output: string;
+    runtime: number;
+  };
+}
 
-/**
- * Persistance: Récupération de l'historique et des stats
- */
-export const historyApi = {
-  getAll: async (): Promise<HistoryEntry[]> => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/history`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Erreur HTTP: ${response.status} - Impossible de charger l'historique`);
-      }
-      
-      const data = await response.json();
-      
-      // Vérifier que la réponse est un tableau
-      if (Array.isArray(data)) {
-        return data;
-      }
-      
-      // Si l'API retourne un objet avec une clé 'history' ou similaire
-      if (data && Array.isArray(data.history)) {
-        return data.history;
-      }
-      
-      // Si l'API retourne un objet avec une clé 'data'
-      if (data && Array.isArray(data.data)) {
-        return data.data;
-      }
-      
-      // Par défaut, retourner un tableau vide si la structure est inattendue
-      console.warn('Format de réponse inattendu de l\'API /history:', data);
-      return [];
-    } catch (error) {
-      if (error instanceof TypeError && error.message.includes('fetch')) {
-        throw new Error('Erreur de connexion: Impossible d\'atteindre le serveur API');
-      }
-      throw error;
-    }
-  }
-};
-
-/**
- * Génération de commande: Endpoint dédié pour STEP 3
- */
-export const generateApi = {
-  generate: async (data: {
-    query: string;
-    target?: string;
-    agent_type?: 'RAG' | 'DIFFUSION';
-  }): Promise<{ command: string; agent_type: string; query: string; target: string }> => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/generate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: data.query,
-          target: data.target || '192.168.188.128',
-          agent_type: data.agent_type || undefined,
-        }),
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || errorData.message || `Erreur HTTP ${response.status}: Échec de la génération de commande`);
-      }
-      
-      return await response.json();
-    } catch (error) {
-      if (error instanceof TypeError && error.message.includes('fetch')) {
-        throw new Error('Erreur de connexion: Impossible d\'atteindre le serveur API');
-      }
-      throw error;
-    }
-  }
-};
-
-// --- INTERFACE POUR LE HEALTH CHECK ---
-
-export interface ExternalServiceStatus {
-  status: 'online' | 'offline' | 'error';
-  url: string;
-  error?: string;
+export interface ExecutionReport {
+  final_status: string;
+  command: string;
+  timestamp: string;
+  stages: ExecutionStages;
+  report?: ExecutionStages; // Alias for compatibility
 }
 
 export interface HealthStatus {
-  status: string;
+  status: 'online' | 'offline';
   local_agents: {
     comprehension_ready: boolean;
     rag_ready: boolean;
     diffusion_ready: boolean;
   };
   external_services: {
-    complexity_api?: ExternalServiceStatus;
-    agent5_mcp?: ExternalServiceStatus;
+    complexity_api?: {
+      status: string;
+      url: string;
+    };
+    agent5_mcp?: {
+      status: string;
+      url: string;
+    };
   };
 }
 
+// ============================================================================
+// API CLIENTS
+// ============================================================================
+
 /**
- * Utilitaires: Vérification de l'état des agents et services
+ * Analyze API - Routes user query through Router Agent
+ * FIXED: This is now a direct function, not an object with .analyze method
  */
-export const healthApi = {
-  check: async (): Promise<HealthStatus> => {
+export const analyzeApi = async (params: { 
+  query: string; 
+  target: string;
+}): Promise<AnalyzeResponse> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/route`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        query: params.query,
+        target: params.target,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Router API error (${response.status}): ${errorText}`);
+    }
+
+    const data = await response.json();
+    
+    // Transform the response to match frontend expectations
+    return {
+      status: data.status || 'unknown',
+      relevant: data.status !== 'rejected',
+      reason: data.reason,
+      analysis: data.complexity || {
+        level: 'Medium',
+        confidence: 0,
+        reason: 'Unknown',
+        target_agent: data.agent || 'UNKNOWN'
+      },
+      generated_command: data.command_generated,
+      generation_method: data.agent,
+      entry_id: data.execution?.entry_id || `entry_${Date.now()}`,
+    };
+  } catch (error) {
+    console.error('Analyze API Error:', error);
+    throw error;
+  }
+};
+
+/**
+ * History API - Fetches command execution history
+ */
+export const historyApi = {
+  async getAll(): Promise<HistoryEntry[]> {
     try {
-      // Créer un AbortController pour gérer le timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 secondes
-      
-      const response = await fetch(`${API_BASE_URL}/health`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-        signal: controller.signal,
-      });
-      
-      clearTimeout(timeoutId);
+      const response = await fetch(`${HISTORY_URL}/history`);
       
       if (!response.ok) {
-        throw new Error(`Health check failed: ${response.status}`);
+        console.warn(`History API returned ${response.status}, returning empty array`);
+        return [];
       }
-      
+
       const data = await response.json();
-      return data as HealthStatus;
+      return Array.isArray(data) ? data : [];
     } catch (error) {
-      // Si c'est une erreur d'abort (timeout), on la propage
-      if (error instanceof Error && error.name === 'AbortError') {
-        throw new Error('Timeout: Le serveur ne répond pas');
+      console.error('History API Error:', error);
+      return []; // Return empty array instead of throwing
+    }
+  },
+
+  async getById(id: string): Promise<HistoryEntry | null> {
+    try {
+      const response = await fetch(`${HISTORY_URL}/history/${id}`);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch entry ${id}`);
       }
-      // Si c'est une erreur réseau (CORS, connexion, etc.)
-      if (error instanceof TypeError && error.message.includes('fetch')) {
-        throw new Error('Erreur de connexion: Impossible d\'atteindre le serveur API');
+
+      return await response.json();
+    } catch (error) {
+      console.error('History Get By ID Error:', error);
+      return null;
+    }
+  }
+};
+
+/**
+ * Health API - Checks system health status
+ */
+export const healthApi = {
+  async check(): Promise<HealthStatus> {
+    try {
+      const response = await fetch(`${HEALTH_URL}/health`);
+      
+      if (!response.ok) {
+        throw new Error(`Health check failed with status ${response.status}`);
       }
-      // Sinon, on propage l'erreur
+
+      return await response.json();
+    } catch (error) {
+      console.error('Health API Error:', error);
+      // Return offline status on error
+      return {
+        status: 'offline',
+        local_agents: {
+          comprehension_ready: false,
+          rag_ready: false,
+          diffusion_ready: false,
+        },
+        external_services: {}
+      };
+    }
+  }
+};
+
+/**
+ * Validation API - Validates commands
+ */
+export const validationApi = {
+  async validate(params: {
+    entry_id: string;
+    intent: string;
+    command: string;
+    agent_name: string;
+  }): Promise<ValidationResult> {
+    try {
+      const response = await fetch(`${HISTORY_URL}/mcp/validate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          command: params.command,
+          intent: params.intent,
+          agent_name: params.agent_name,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Validation failed (${response.status}): ${errorText}`);
+      }
+
+      const data = await response.json();
+      
+      return {
+        valid: data.valid || false,
+        score: data.score || 0,
+        status: data.status || 'unknown',
+        method: data.method_used || 'unknown',
+        errors: data.errors || [],
+        warnings: data.warnings || [],
+      };
+    } catch (error) {
+      console.error('Validation API Error:', error);
       throw error;
     }
   }
+};
+
+/**
+ * Execution API - Executes validated commands
+ */
+export const executionApi = {
+  async execute(params: {
+    entry_id: string;
+    intent: string;
+    command: string;
+    target: string;
+    agent_name: string;
+  }): Promise<ExecutionReport> {
+    try {
+      const response = await fetch(`${HISTORY_URL}/mcp/execute`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          command: params.command,
+          intent: params.intent,
+          target: params.target,
+          agent_name: params.agent_name,
+          skip_sandbox: false,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Execution failed (${response.status}): ${errorText}`);
+      }
+
+      const data = await response.json();
+      
+      return {
+        final_status: data.final_status || 'unknown',
+        command: data.command || params.command,
+        timestamp: data.timestamp || new Date().toISOString(),
+        stages: data.stages || data.report || {},
+        report: data.report || data.stages || {},
+      };
+    } catch (error) {
+      console.error('Execution API Error:', error);
+      throw error;
+    }
+  }
+};
+
+/**
+ * Helper function to check if API is reachable
+ */
+export const checkApiConnection = async (): Promise<boolean> => {
+  try {
+    const response = await fetch(`${HEALTH_URL}/health`, {
+      method: 'GET',
+      signal: AbortSignal.timeout(5000), // 5 second timeout
+    });
+    return response.ok;
+  } catch (error) {
+    console.error('API Connection Check Failed:', error);
+    return false;
+  }
+};
+
+export default {
+  analyze: analyzeApi,
+  history: historyApi,
+  health: healthApi,
+  validation: validationApi,
+  execution: executionApi,
+  checkConnection: checkApiConnection,
 };
