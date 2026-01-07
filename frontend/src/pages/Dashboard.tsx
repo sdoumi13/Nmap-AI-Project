@@ -6,6 +6,7 @@ import {
   Cpu, HardDrive, Wifi, Lock, Code, Sparkles, Brain, Terminal
 } from 'lucide-react';
 import { historyApi, healthApi, validationApi, executionApi, HistoryEntry, HealthStatus } from '../services/api';
+import RobotPipeline from '../components/RobotPipeline';
 
 
 
@@ -183,27 +184,88 @@ export default function Dashboard() {
     }
   }, [getLastValidatedEntry, fetchDashboardData]);
 
+  // Determine current pipeline stage based on recent history
+  const getCurrentPipelineStage = useCallback((): number => {
+    if (!recentHistory.length) return 0;
+    const latest = recentHistory[0];
+    if (latest.status === 'running') {
+      // Determine which stage based on what data is available
+      if (latest.generated_command && latest.execution_report) return 4;
+      if (latest.generated_command) return 3;
+      if (latest.target_agent) return 2;
+      return 1;
+    }
+    if (latest.status === 'completed') return 4;
+    if (latest.status === 'pending') return latest.generated_command ? 3 : 2;
+    return 0;
+  }, [recentHistory]);
+
+  // Get robot statuses based on health and history
+  const getRobotStatuses = useCallback(() => {
+    const statuses: Record<string, 'idle' | 'active' | 'processing' | 'complete' | 'error'> = {};
+    const logs: Record<string, string[]> = {};
+    
+    if (healthStatus) {
+      statuses.comprehension = healthStatus.local_agents.comprehension_ready ? 'active' : 'idle';
+      logs.comprehension = ['TF-IDF Analysis Ready', 'SBERT Embeddings Loaded'];
+      
+      statuses.router = healthStatus.external_services.complexity_api?.status === 'online' ? 'active' : 'idle';
+      logs.router = ['Complexity API: Connected', 'Routing Engine: Ready'];
+      
+      statuses.agent5 = healthStatus.external_services.agent5_mcp?.status === 'online' ? 'active' : 'idle';
+      logs.agent5 = ['MCP Server: Active', 'Validation: Ready', 'Sandbox: Docker', 'VM: Connected'];
+    }
+
+    // Determine active model from latest history entry
+    if (recentHistory.length > 0) {
+      const latest = recentHistory[0];
+      const method = latest.generation_method?.toLowerCase() || '';
+      if (method.includes('rag') || method.includes('mistral')) {
+        statuses.mistral = latest.status === 'running' ? 'processing' : latest.status === 'completed' ? 'complete' : 'active';
+      } else if (method.includes('phi')) {
+        statuses.phi4 = latest.status === 'running' ? 'processing' : latest.status === 'completed' ? 'complete' : 'active';
+      } else if (method.includes('lora') || method.includes('t5')) {
+        statuses['lora-t5'] = latest.status === 'running' ? 'processing' : latest.status === 'completed' ? 'complete' : 'active';
+      }
+    }
+
+    return { statuses, logs };
+  }, [healthStatus, recentHistory]);
+
+  const { statuses, logs } = getRobotStatuses();
+  const currentStage = getCurrentPipelineStage();
+  const latestQuery = recentHistory.length > 0 ? recentHistory[0].query : '';
+
   return (
-    <div className="relative">
-      {/* Static Background - No blur effects */}
+    <div className="relative min-h-screen bg-claude-charcoal-dark text-claude-white">
+      {/* Claude Aesthetic Background */}
       <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-purple-500/3 rounded-full" />
-        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-blue-500/3 rounded-full" />
+        <div className="absolute top-0 right-0 w-96 h-96 bg-claude-coral/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-claude-white/3 rounded-full blur-3xl" />
+        {/* Subtle grid pattern */}
+        <div 
+          className="absolute inset-0 opacity-5"
+          style={{
+            backgroundImage: `
+              linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px)
+            `,
+            backgroundSize: '30px 30px',
+          }}
+        />
       </div>
 
-      <div className="space-y-8 relative z-10">
-        {/* Header Section Enhanced */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-slate-800/60 pb-6 relative animate-fade-in-up">
+      <div className="space-y-8 relative z-10 p-6">
+        {/* Header Section - Claude Style */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-claude-white/10 pb-6 relative animate-fade-in-up">
           <div className="relative">
-            <h1 className="text-5xl md:text-6xl font-bold text-white tracking-tight relative">
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-white via-purple-200 to-blue-200">
+            <h1 className="text-5xl md:text-6xl font-bold text-claude-white tracking-tight relative">
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-claude-white via-claude-coral to-claude-white">
                 Dashboard
               </span>
-              <span className="text-purple-500 inline-block ml-2">
-              </span>
             </h1>
-            <p className="mt-3 text-slate-400 text-lg flex items-center gap-2">
-              <Server className="w-4 h-4 text-purple-400" />
+            <p className="mt-3 text-claude-grey-light text-lg flex items-center gap-2">
+              <Server className="w-4 h-4 text-claude-coral" />
               Surveillance et orchestration des agents IA
             </p>
           </div>
@@ -216,7 +278,7 @@ export default function Dashboard() {
             }`}
           >
             <div 
-              className={`w-3 h-3 rounded-full ${apiHealth ? 'bg-emerald-500' : 'bg-red-500'}`}
+              className={`w-3 h-3 rounded-full ${apiHealth ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`}
             />
             <span className="font-mono text-sm font-semibold tracking-wider">
               API {apiHealth ? 'ONLINE' : 'OFFLINE'}
@@ -224,18 +286,29 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Services Status Section */}
+        {/* Robot Pipeline Visualization - Main Feature */}
+        <div className="animate-fade-in-up animate-stagger-1">
+          <RobotPipeline 
+            currentStage={currentStage}
+            query={latestQuery}
+            status={statuses}
+            logs={logs}
+            healthStatus={healthStatus}
+          />
+        </div>
+
+        {/* Services Status Section - Claude Style */}
         {healthStatus && (
-          <div className="bg-gradient-to-br from-slate-900/90 via-slate-900/80 to-slate-900/90 border border-slate-800/50 rounded-2xl p-6 animate-fade-in-up animate-stagger-1"
+          <div className="bg-gradient-to-br from-claude-charcoal/90 via-claude-charcoal/80 to-claude-charcoal-dark/90 border border-claude-white/10 rounded-2xl p-6 animate-fade-in-up animate-stagger-1 backdrop-blur-sm"
           >
-            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-              <Server className="w-5 h-5 text-purple-400" />
+            <h3 className="text-lg font-bold text-claude-white mb-4 flex items-center gap-2">
+              <Server className="w-5 h-5 text-claude-coral" />
               Statut des Services
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Local Agents */}
               <div className="space-y-2">
-                <h4 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">Agents Locaux</h4>
+                <h4 className="text-sm font-semibold text-claude-grey-light uppercase tracking-wider">Agents Locaux</h4>
                 <ServiceStatusItem 
                   label="Comprehension Agent" 
                   ready={healthStatus.local_agents.comprehension_ready}
@@ -255,7 +328,7 @@ export default function Dashboard() {
               
               {/* External Services */}
               <div className="space-y-2">
-                <h4 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">Services Externes</h4>
+                <h4 className="text-sm font-semibold text-claude-grey-light uppercase tracking-wider">Services Externes</h4>
                 {healthStatus.external_services.complexity_api && (
                   <ServiceStatusItem 
                     label="Complexity API (Port 7000)" 
@@ -275,16 +348,16 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Stats Grid Enhanced */}
+        {/* Stats Grid Enhanced - Claude Style */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <div className="animate-fade-in-up animate-stagger-1">
             <StatCard 
               title="Total Requêtes" 
               value={stats.total} 
               icon={Network} 
-              color="text-blue-400" 
-              bgGradient="from-blue-500/20 via-blue-500/10 to-transparent"
-              borderColor="border-blue-500/30"
+              color="text-claude-coral" 
+              bgGradient="from-claude-coral/20 via-claude-coral/10 to-transparent"
+              borderColor="border-claude-coral/30"
               loading={loading}
               trend={stats.total > 0 ? 'up' : 'neutral'}
             />
@@ -318,9 +391,9 @@ export default function Dashboard() {
               title="Actifs" 
               value={stats.pending + stats.running} 
               icon={Activity} 
-              color="text-yellow-400" 
-              bgGradient="from-yellow-500/20 via-yellow-500/10 to-transparent"
-              borderColor="border-yellow-500/30"
+              color="text-claude-coral" 
+              bgGradient="from-claude-coral/20 via-claude-coral/10 to-transparent"
+              borderColor="border-claude-coral/30"
               loading={loading}
               trend={stats.pending + stats.running > 0 ? 'up' : 'neutral'}
             />
@@ -328,10 +401,10 @@ export default function Dashboard() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Quick Actions Enhanced */}
+          {/* Quick Actions Enhanced - Claude Style */}
           <div className="lg:col-span-1 space-y-6 animate-fade-in-up animate-stagger-2">
-            <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-              <Zap className="w-6 h-6 text-purple-400" />
+            <h2 className="text-2xl font-bold text-claude-white flex items-center gap-3">
+              <Zap className="w-6 h-6 text-claude-coral" />
               Actions Rapides
             </h2>
             <div className="grid gap-4">
@@ -400,38 +473,38 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Recent History Table Enhanced */}
+          {/* Recent History Table Enhanced - Claude Style */}
           <div className="lg:col-span-2 space-y-4 animate-fade-in-up animate-stagger-3">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-                <Clock className="w-6 h-6 text-purple-400" />
+              <h2 className="text-2xl font-bold text-claude-white flex items-center gap-3">
+                <Clock className="w-6 h-6 text-claude-coral" />
                 Activité Récente
               </h2>
               <Link 
                 to="/history" 
-                className="text-sm text-purple-400 hover:text-purple-300 transition-all flex items-center gap-2 group px-4 py-2 rounded-lg hover:bg-purple-500/10 border border-transparent hover:border-purple-500/30"
+                className="text-sm text-claude-coral hover:text-claude-coral-light transition-all flex items-center gap-2 group px-4 py-2 rounded-lg hover:bg-claude-coral/10 border border-transparent hover:border-claude-coral/30"
               >
                 Voir l'historique 
                 <ArrowRight className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" />
               </Link>
             </div>
 
-            <div className="bg-gradient-to-br from-slate-900/90 via-slate-900/80 to-slate-900/90 border border-slate-800/50 rounded-2xl overflow-hidden shadow-2xl relative">
+            <div className="bg-gradient-to-br from-claude-charcoal/90 via-claude-charcoal/80 to-claude-charcoal-dark/90 border border-claude-white/10 rounded-2xl overflow-hidden shadow-2xl relative backdrop-blur-sm">
               {/* Border gradient simplifié */}
               <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-purple-500/0 via-purple-500/5 to-blue-500/0 opacity-0 hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
               
               {loading ? (
                 <div className="p-12 text-center">
-                  <div className="w-8 h-8 border-4 border-purple-500/30 border-t-purple-500 rounded-full mx-auto mb-4 animate-spin" />
-                  <p className="text-slate-400 font-mono">Chargement des données...</p>
+                  <div className="w-8 h-8 border-4 border-claude-coral/30 border-t-claude-coral rounded-full mx-auto mb-4 animate-spin" />
+                  <p className="text-claude-grey-light font-mono">Chargement des données...</p>
                 </div>
               ) : recentHistory.length === 0 ? (
-                <div className="p-16 text-center border-dashed border-2 border-slate-800/50 m-6 rounded-xl bg-slate-900/30">
-                  <AlertTriangle className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-                  <p className="text-slate-500 font-mono">Aucune donnée disponible</p>
+                <div className="p-16 text-center border-dashed border-2 border-claude-white/10 m-6 rounded-xl bg-claude-charcoal-dark/30">
+                  <AlertTriangle className="w-12 h-12 text-claude-grey mx-auto mb-4" />
+                  <p className="text-claude-grey font-mono">Aucune donnée disponible</p>
                 </div>
               ) : (
-                <div className="divide-y divide-slate-800/50">
+                <div className="divide-y divide-claude-white/10">
                   {recentHistory.map((entry, index) => (
                     <div 
                       key={entry.id}
@@ -500,7 +573,7 @@ const StatCard = memo(function StatCard({
 }: StatCardProps) {
     return (
         <div 
-            className={`relative overflow-hidden bg-slate-900/90 border ${borderColor} p-6 rounded-2xl shadow-xl group cursor-pointer hover-lift transition-smooth`}
+            className={`relative overflow-hidden bg-claude-charcoal/90 border ${borderColor} p-6 rounded-2xl shadow-xl group cursor-pointer hover-lift transition-smooth backdrop-blur-sm`}
         >
             {/* Simple gradient background */}
             <div 
@@ -509,11 +582,11 @@ const StatCard = memo(function StatCard({
             
             <div className="flex justify-between items-start relative z-10">
                 <div className="flex-1">
-                    <p className="text-slate-400 text-xs font-medium uppercase tracking-wider mb-2">
+                    <p className="text-claude-grey-light text-xs font-medium uppercase tracking-wider mb-2">
                         {title}
                     </p>
                     <div className="flex items-baseline gap-2">
-                        <h3 className="text-4xl font-bold text-white font-mono">
+                        <h3 className="text-4xl font-bold text-claude-white font-mono">
                             {loading ? (
                                 <span className="opacity-50">
                                     ...
@@ -531,7 +604,7 @@ const StatCard = memo(function StatCard({
                         )}
                     </div>
                 </div>
-                <div className={`p-4 rounded-xl bg-slate-800/50 ${color} shadow-lg transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3`}>
+                <div className={`p-4 rounded-xl bg-claude-charcoal-dark/50 ${color} shadow-lg transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3`}>
                     <Icon className="w-7 h-7" />
                 </div>
             </div>
@@ -603,7 +676,7 @@ const QuickActionCard = memo(function QuickActionCard({
         <button
             onClick={onClick}
             disabled={disabled || loading}
-            className={`relative flex items-center gap-4 p-5 bg-slate-900/90 border border-slate-800/50 rounded-xl hover-lift transition-smooth shadow-lg group overflow-hidden ${config.border} ${config.shadow} ${
+            className={`relative flex items-center gap-4 p-5 bg-claude-charcoal/90 border border-claude-white/10 rounded-xl hover-lift transition-smooth shadow-lg group overflow-hidden backdrop-blur-sm ${config.border} ${config.shadow} ${
                 disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
             } ${loading ? 'animate-pulse' : ''}`}
         >
@@ -622,14 +695,14 @@ const QuickActionCard = memo(function QuickActionCard({
             </div>
             
             <div className="flex-1 relative z-10 text-left">
-                <h3 className="font-semibold text-white group-hover:text-white transition-colors mb-1">
+                <h3 className="font-semibold text-claude-white group-hover:text-claude-white transition-colors mb-1">
                     {title}
                 </h3>
-                <p className="text-sm text-slate-400 group-hover:text-slate-300 font-medium">
+                <p className="text-sm text-claude-grey-light group-hover:text-claude-grey font-medium">
                     {subtitle}
                 </p>
                 {description && (
-                    <p className="text-xs text-slate-500 mt-1 group-hover:text-slate-400">
+                    <p className="text-xs text-claude-grey mt-1 group-hover:text-claude-grey-light">
                         {description}
                     </p>
                 )}
@@ -637,9 +710,9 @@ const QuickActionCard = memo(function QuickActionCard({
             
             <div className="relative z-10">
                 {loading ? (
-                    <Activity className="w-5 h-5 text-purple-400 animate-spin" />
+                    <Activity className="w-5 h-5 text-claude-coral animate-spin" />
                 ) : (
-                    <ArrowRight className="w-5 h-5 text-slate-600 group-hover:text-purple-400 opacity-0 group-hover:opacity-100 transform -translate-x-2 group-hover:translate-x-0 transition-all duration-300 group-hover:scale-110" />
+                    <ArrowRight className="w-5 h-5 text-claude-grey group-hover:text-claude-coral opacity-0 group-hover:opacity-100 transform -translate-x-2 group-hover:translate-x-0 transition-all duration-300 group-hover:scale-110" />
                 )}
             </div>
             
@@ -696,7 +769,7 @@ const ActionCard = memo(function ActionCard({ to, icon: Icon, title, subtitle, d
     return (
         <Link to={to}>
             <div 
-                className={`relative flex items-center gap-4 p-5 bg-slate-900/90 border border-slate-800/50 rounded-xl hover-lift transition-smooth shadow-lg group overflow-hidden ${config.border} ${config.shadow}`}
+                className={`relative flex items-center gap-4 p-5 bg-claude-charcoal/90 border border-claude-white/10 rounded-xl hover-lift transition-smooth shadow-lg group overflow-hidden backdrop-blur-sm ${config.border} ${config.shadow}`}
             >
                 {/* Background gradient */}
                 <div
@@ -709,21 +782,21 @@ const ActionCard = memo(function ActionCard({ to, icon: Icon, title, subtitle, d
                 </div>
                 
                 <div className="flex-1 relative z-10">
-                    <h3 className="font-semibold text-white group-hover:text-white transition-colors mb-1">
+                    <h3 className="font-semibold text-claude-white group-hover:text-claude-white transition-colors mb-1">
                         {title}
                     </h3>
-                    <p className="text-sm text-slate-400 group-hover:text-slate-300 font-medium">
+                    <p className="text-sm text-claude-grey-light group-hover:text-claude-grey font-medium">
                         {subtitle}
                     </p>
                     {description && (
-                        <p className="text-xs text-slate-500 mt-1 group-hover:text-slate-400">
+                        <p className="text-xs text-claude-grey mt-1 group-hover:text-claude-grey-light">
                             {description}
                         </p>
                     )}
                 </div>
                 
                 <div className="relative z-10">
-                    <ArrowRight className="w-5 h-5 text-slate-600 group-hover:text-purple-400 opacity-0 group-hover:opacity-100 transform -translate-x-2 group-hover:translate-x-0 transition-all duration-300 group-hover:scale-110" />
+                    <ArrowRight className="w-5 h-5 text-claude-grey group-hover:text-claude-coral opacity-0 group-hover:opacity-100 transform -translate-x-2 group-hover:translate-x-0 transition-all duration-300 group-hover:scale-110" />
                 </div>
                 
                 {/* Bottom accent line */}
@@ -752,13 +825,13 @@ const SystemStatusCard = memo(function SystemStatusCard({ icon: Icon, label, val
 
     return (
         <div
-            className={`p-3 rounded-lg bg-slate-900/70 border ${statusColors[status]} hover-lift transition-smooth`}
+            className={`p-3 rounded-lg bg-claude-charcoal/70 border ${statusColors[status]} hover-lift transition-smooth backdrop-blur-sm`}
         >
             <div className="flex items-center gap-2 mb-2">
                 <Icon className="w-4 h-4" />
-                <span className="text-xs text-slate-400 font-medium">{label}</span>
+                <span className="text-xs text-claude-grey-light font-medium">{label}</span>
             </div>
-            <p className="text-sm font-semibold font-mono">{value}</p>
+            <p className="text-sm font-semibold font-mono text-claude-white">{value}</p>
         </div>
     );
 });
@@ -771,14 +844,14 @@ interface ServiceStatusItemProps {
 
 const ServiceStatusItem = memo(function ServiceStatusItem({ label, ready, icon: Icon }: ServiceStatusItemProps) {
     return (
-        <div className="flex items-center justify-between p-2 rounded-lg bg-slate-800/30 border border-slate-700/30">
+        <div className="flex items-center justify-between p-2 rounded-lg bg-claude-charcoal-dark/30 border border-claude-white/10 backdrop-blur-sm">
             <div className="flex items-center gap-2">
                 <Icon className={`w-4 h-4 ${ready ? 'text-emerald-400' : 'text-red-400'}`} />
-                <span className="text-sm text-slate-300">{label}</span>
+                <span className="text-sm text-claude-grey-light">{label}</span>
             </div>
             <div className="flex items-center gap-2">
                 <div
-                    className={`w-2 h-2 rounded-full ${ready ? 'bg-emerald-500' : 'bg-red-500'}`}
+                    className={`w-2 h-2 rounded-full ${ready ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`}
                 />
                 <span className={`text-xs font-mono ${ready ? 'text-emerald-400' : 'text-red-400'}`}>
                     {ready ? 'ONLINE' : 'OFFLINE'}
@@ -809,13 +882,13 @@ const HistoryEntryItem = memo(function HistoryEntryItem({
   const StatusIcon = config.icon;
 
   return (
-    <div className="group relative p-5 flex items-center justify-between transition-all duration-300 cursor-default overflow-hidden hover:bg-slate-800/30 animate-slide-in-right hover-lift">
+    <div className="group relative p-5 flex items-center justify-between transition-all duration-300 cursor-default overflow-hidden hover:bg-claude-charcoal-dark/30 animate-slide-in-right hover-lift">
       {/* Animated background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-r from-purple-500/0 via-purple-500/5 to-blue-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+      <div className="absolute inset-0 bg-gradient-to-r from-claude-coral/0 via-claude-coral/5 to-claude-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
       
       {/* Scan line effect on hover */}
       <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-purple-400/50 to-transparent animate-scan-line" />
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-claude-coral/50 to-transparent animate-scan-line" />
       </div>
 
       {/* Left border accent - animated */}
@@ -856,25 +929,25 @@ const HistoryEntryItem = memo(function HistoryEntryItem({
               } ${config.pulse ? 'animate-pulse' : ''} shadow-lg ${config.glow}`}
             />
           </div>
-          <h4 className="font-semibold text-slate-200 truncate font-mono text-sm group-hover:text-white transition-all duration-300 group-hover:tracking-wide">
+          <h4 className="font-semibold text-claude-grey-light truncate font-mono text-sm group-hover:text-claude-white transition-all duration-300 group-hover:tracking-wide">
             {entry.query}
           </h4>
         </div>
 
         {/* Metadata with icons */}
-        <div className="flex items-center gap-4 text-xs text-slate-500 mb-3">
-          <span className="flex items-center gap-1.5 group-hover:text-slate-400 transition-colors">
+        <div className="flex items-center gap-4 text-xs text-claude-grey mb-3">
+          <span className="flex items-center gap-1.5 group-hover:text-claude-grey-light transition-colors">
             <Clock className="w-3.5 h-3.5 group-hover:scale-110 transition-transform duration-300" />
             <span className="font-mono">{new Date(entry.timestamp).toLocaleTimeString()}</span>
           </span>
-          <span className="px-2.5 py-1 rounded-md bg-slate-800/50 text-slate-400 border border-slate-700/50 font-mono text-xs group-hover:border-purple-500/30 group-hover:bg-purple-500/5 group-hover:text-purple-300 transition-all duration-300">
+          <span className="px-2.5 py-1 rounded-md bg-claude-charcoal-dark/50 text-claude-grey-light border border-claude-white/10 font-mono text-xs group-hover:border-claude-coral/30 group-hover:bg-claude-coral/5 group-hover:text-claude-coral transition-all duration-300">
             {entry.target_agent || 'Router'}
           </span>
           {entry.generation_method && (
             <span className={`px-2.5 py-1 rounded-md font-mono text-xs border transition-all duration-300 group-hover:scale-105 ${
               entry.generation_method === 'RAG' 
                 ? 'bg-blue-500/10 text-blue-400 border-blue-500/30 group-hover:bg-blue-500/20 group-hover:border-blue-500/50 group-hover:shadow-blue-500/20 group-hover:shadow-lg'
-                : 'bg-purple-500/10 text-purple-400 border-purple-500/30 group-hover:bg-purple-500/20 group-hover:border-purple-500/50 group-hover:shadow-purple-500/20 group-hover:shadow-lg'
+                : 'bg-claude-coral/10 text-claude-coral border-claude-coral/30 group-hover:bg-claude-coral/20 group-hover:border-claude-coral/50 group-hover:shadow-claude-coral/20 group-hover:shadow-lg'
             }`}>
               {entry.generation_method}
             </span>
@@ -883,16 +956,16 @@ const HistoryEntryItem = memo(function HistoryEntryItem({
 
         {/* Command display with enhanced styling */}
         {entry.generated_command && (
-          <div className="mt-3 p-3 bg-slate-800/40 rounded-lg border border-slate-700/40 group-hover:border-purple-500/30 group-hover:bg-slate-800/60 transition-all duration-300 relative overflow-hidden">
+          <div className="mt-3 p-3 bg-claude-charcoal-dark/40 rounded-lg border border-claude-white/10 group-hover:border-claude-coral/30 group-hover:bg-claude-charcoal-dark/60 transition-all duration-300 relative overflow-hidden backdrop-blur-sm">
             {/* Shimmer effect on hover */}
             <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-purple-500/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-claude-coral/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
             </div>
-            <p className="text-xs text-slate-500 mb-1.5 flex items-center gap-1.5 group-hover:text-slate-400 transition-colors">
-              <Code className="w-3 h-3 group-hover:text-purple-400 transition-colors" />
+            <p className="text-xs text-claude-grey mb-1.5 flex items-center gap-1.5 group-hover:text-claude-grey-light transition-colors">
+              <Code className="w-3 h-3 group-hover:text-claude-coral transition-colors" />
               Commande générée:
             </p>
-            <p className="text-xs font-mono text-slate-300 break-all relative z-10 group-hover:text-slate-200 transition-colors">
+            <p className="text-xs font-mono text-claude-grey-light break-all relative z-10 group-hover:text-claude-white transition-colors">
               {entry.generated_command}
             </p>
           </div>
@@ -926,8 +999,8 @@ const HistoryEntryItem = memo(function HistoryEntryItem({
           : entry.status === 'failed'
             ? 'from-red-500/0 via-red-500/50 to-red-500/0'
             : entry.status === 'running'
-              ? 'from-blue-500/0 via-blue-500/50 to-blue-500/0'
-              : 'from-yellow-500/0 via-yellow-500/50 to-yellow-500/0'
+              ? 'from-claude-coral/0 via-claude-coral/50 to-claude-coral/0'
+              : 'from-claude-coral/0 via-claude-coral/30 to-claude-coral/0'
       } opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
     </div>
   );

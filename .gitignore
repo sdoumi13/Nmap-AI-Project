@@ -19,3 +19,4 @@ Thumbs.db
 *.sqlite3 
 *.pickle 
 *.safetensors 
+.hintrc
