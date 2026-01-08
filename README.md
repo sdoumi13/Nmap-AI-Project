@@ -1,51 +1,10 @@
 # Nmap-AI-Project
 
 """
-## DOUMI SALMA Role "Agent 1 Router[COMPLEXITY AGENT] + 
+##
 
 # Nmap AI Project - 
 
-## Architecture
-
-Ce projet implémente un système intelligent de routage pour la génération de commandes Nmap basé sur 3 corpus détaillés :
-
-
-```
-<<<<<<< HEAD
-Nmap-AI-Project/
-├── agent_1_router/
-│   ├── __init__.py
-│   ├── comprehension.py      # TF-IDF & SBERT Filter 
-│   ├── complexity.py          # Classification Easy/Medium/Hard (utilise Fine-tuning corpus)
-│   └── run_router.py          # Point d'entrée principal
-├── datasets/
-│   ├── rag_corpus_detailed.json           # Corpus pour RAG 
-│   ├── finetuning_corpus_detailed.json    # Corpus pour Fine-tuning 
-│   └── diffusion_corpus_detailed.json
-agent5_validation+self-correction-sandboxing-testVM/
-├── __init__.py
-├── validation/
-│   ├── __init__.py
-│   ├── semantic_validator.py      # Step 1: Semantic rules
-│   ├── llm_judge.py                # Step 2: LLM fallback
-│   └── hybrid_validator.py         # Step 3: Combined validation
-├── mcp/
-│   ├── __init__.py
-│   ├── mcp_server.py                   # Step 4-5-6: MCP server
-├── execution/
-│   ├── __init__.py
-│   ├── sandbox_executor.py         # Step 7: Docker sandbox
-│   └── vm_executor.py              # Step 8: VM execution
-├── self_correction/
-│   ├── __init__.py
-│   └── corrector.py                # Step 9: Self-correction loop
-└── run_agent5.py                 # Step 10: Main orchestrator
-"""
-├── requirements.txt
-└── README.md
-```
-=======
->>>>>>> b788b47490d84202b2ece0f2883cc667e4a8180d
 
 ## Installation
 
