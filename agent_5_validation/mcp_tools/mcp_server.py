@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware  # Added missing import
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Dict, Any, Optional, List
 from datetime import datetime
@@ -117,15 +117,25 @@ class Agent5MCPServer:
             agent_name=agent_name
         )
         
-        # Ensure we handle the Enum vs String logic correctly
-        status_val = validation.status.value if hasattr(validation.status, 'value') else validation.status
+        # Handle both dict and object responses from validator
+        if isinstance(validation, dict):
+            status_val = validation.get('status')
+            final_score = validation.get('score', validation.get('final_score', 0))
+            semantic_errors = validation.get('errors', validation.get('semantic_errors', []))
+            suggestions = validation.get('warnings', validation.get('suggestions', []))
+        else:
+            # If it's an object with attributes
+            status_val = validation.status.value if hasattr(validation.status, 'value') else validation.status
+            final_score = getattr(validation, 'final_score', getattr(validation, 'score', 0))
+            semantic_errors = getattr(validation, 'semantic_errors', [])
+            suggestions = getattr(validation, 'suggestions', [])
         
         return {
             "valid": status_val == "valid" or status_val == ValidationStatus.VALID,
             "status": str(status_val),
-            "score": int(validation.final_score),
-            "errors": getattr(validation, 'semantic_errors', []),
-            "warnings": getattr(validation, 'suggestions', []),
+            "score": int(final_score),
+            "errors": semantic_errors,
+            "warnings": suggestions,
             "method_used": "hybrid_semantic_llm",
             "timestamp": datetime.now().isoformat()
         }

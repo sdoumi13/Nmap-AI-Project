@@ -1,5 +1,5 @@
 """
-Agent 5 - Complete Execution Script with CORS FIXED
+Agent 5 - Complete Execution Script with FIXED CORRECTION LOGIC
 Windows + GPU RTX 3080 + LM Studio + Docker + Ubuntu VM
 """
 
@@ -58,7 +58,7 @@ class Agent5Pipeline:
         # 5. Self-Corrector
         print("  [5/5] Self-Correction Agent...")
         self.corrector = SelfCorrectionAgent(
-            llm_generate_func=self._mock_correction,
+            llm_generate_func=None,  # Not needed, using rule-based
             max_retries=self.config['validation']['max_retries']
         )
         
@@ -114,7 +114,7 @@ class Agent5Pipeline:
         if validation.get('errors'):
             print(f"  Errors: {validation['errors']}")
         
-        # Convert ValidationStatus to string before serializing
+        # Store validation results
         report['stages']['validation'] = {
             "status": str(validation['status']),
             "score": validation['score'],
@@ -127,12 +127,22 @@ class Agent5Pipeline:
         # STAGE 2: SELF-CORRECTION (if needed)
         # ============================================================
         is_valid = validation.get('valid', False)
-        is_recoverable = str(validation.get('status')) == "recoverable"
+        
+        # FIX: Properly check for RECOVERABLE status
+        status = validation.get('status')
+        if isinstance(status, ValidationStatus):
+            is_recoverable = (status == ValidationStatus.RECOVERABLE)
+        else:
+            # Handle string comparison
+            is_recoverable = (str(status).lower() == "recoverable" or 
+                            str(status) == "ValidationStatus.RECOVERABLE")
+        
+        print(f"\n[DEBUG] is_valid={is_valid}, status={status}, is_recoverable={is_recoverable}")
 
         if not is_valid and is_recoverable:
             print("\n[STAGE 2/4] SELF-CORRECTION")
             print("-"*70)
-            print("  Attempting to correct command...")
+            print("  🔧 Command is RECOVERABLE - attempting correction...")
             
             corrected_cmd, history = await self.corrector.correct(
                 intent=intent,
@@ -141,18 +151,23 @@ class Agent5Pipeline:
                 mcp_client=self.mcp_client
             )
             
-            print(f"  Correction history:")
+            print(f"\n  📋 Correction history:")
             for entry in history:
                 print(f"    - {entry}")
             
             command = corrected_cmd
+            report['command'] = command
             
-            # Re-validate (returns dict)
+            # Re-validate the corrected command
+            print(f"\n  🔍 Re-validating corrected command...")
             validation = await self.mcp_client.validate_command(
                 command=command,
                 intent=intent,
                 agent_name=f"{agent_name}-corrected"
             )
+            
+            print(f"  New Score: {validation['score']}/100")
+            print(f"  New Status: {validation['status']}")
             
             report['stages']['self_correction'] = {
                 "applied": True,
@@ -160,19 +175,28 @@ class Agent5Pipeline:
                 "corrected_command": command,
                 "final_command": command,
                 "history": history,
-                "attempts": [{"iteration": i+1, "fix": h} for i, h in enumerate(history)],
-                "final_score": validation['score']
+                "attempts": len(history),
+                "final_score": validation['score'],
+                "final_status": str(validation['status'])
             }
-            report['command'] = command
+            
+            # Update validity based on new validation
             is_valid = validation.get('valid', False)
+            
         else:
             print("\n[STAGE 2/4] SELF-CORRECTION")
             print("-"*70)
-            print("  ✅ No correction needed")
+            if is_valid:
+                print("  ✅ Command is VALID - no correction needed")
+                reason = "validation passed"
+            else:
+                print("  ❌ Command is INVALID/UNRECOVERABLE - skipping correction")
+                reason = "invalid/unrecoverable"
+            
             report['stages']['self_correction'] = {
                 "applied": False,
                 "final_score": validation['score'],
-                "reason": "validation passed" if is_valid else "invalid/unrecoverable"
+                "reason": reason
             }
         
         # ============================================================
@@ -181,7 +205,7 @@ class Agent5Pipeline:
         if is_valid and not skip_sandbox:
             print("\n[STAGE 3/4] SANDBOX TEST (Docker)")
             print("-"*70)
-            print("  Executing in isolated Docker container...")
+            print("  🐳 Executing in isolated Docker container...")
             
             sandbox_result = await self.sandbox.execute(
                 command=command.replace("TARGET", target),
@@ -189,12 +213,12 @@ class Agent5Pipeline:
             )
             
             if sandbox_result['success']:
-                print(f"  ^_^ Sandbox test PASSED")
-                print(f"  Execution time: {sandbox_result['time']:.2f}s")
-                print(f"  Output preview: {sandbox_result['output'][:100]}...")
+                print(f"  ✅ Sandbox test PASSED")
+                print(f"  ⏱️  Execution time: {sandbox_result['time']:.2f}s")
+                print(f"  📄 Output preview: {sandbox_result['output'][:100]}...")
             else:
-                print(f"  :| Sandbox test FAILED")
-                print(f"  Errors: {sandbox_result['errors']}")
+                print(f"  ❌ Sandbox test FAILED")
+                print(f"  🚨 Errors: {sandbox_result['errors']}")
             
             report['stages']['sandbox'] = sandbox_result
             report['stages']['sandbox_execution'] = sandbox_result  # Alias for frontend
@@ -222,26 +246,29 @@ class Agent5Pipeline:
         if is_valid:
             print("\n[STAGE 4/4] VM EXECUTION (Ubuntu SSH)")
             print("-"*70)
-            print(f"  Target: {target} | VM: {self.config['vm']['host']}")
+            print(f"  🎯 Target: {target} | VM: {self.config['vm']['host']}")
             
             try:
                 with self.vm as vm:
                     vm_result = vm.execute(command=command.replace("TARGET", target), target=target)
                 
                 if vm_result['success']:
-                    print(f"  ^_^ VM execution SUCCESSFUL")
+                    print(f"  ✅ VM execution SUCCESSFUL")
                 else:
-                    print(f"  :| VM execution FAILED")
-                    print(f"  Errors: {vm_result['errors']}")
+                    print(f"  ❌ VM execution FAILED")
+                    print(f"  🚨 Errors: {vm_result['errors']}")
                 
                 report['stages']['vm_execution'] = vm_result
                 report['final_status'] = 'success' if vm_result['success'] else 'failed_vm'
             
             except Exception as e:
-                print(f" :| VM connection error: {e}")
+                print(f"  ❌ VM connection error: {e}")
                 report['stages']['vm_execution'] = {"success": False, "errors": [str(e)]}
                 report['final_status'] = 'vm_connection_error'
         else:
+            print("\n[STAGE 4/4] VM EXECUTION")
+            print("-"*70)
+            print("  ⭕ Skipped (validation failed)")
             report['stages']['vm_execution'] = {"skipped": True}
             report['final_status'] = 'failed_validation'
         
@@ -254,13 +281,6 @@ class Agent5Pipeline:
         print(f"Validation Score: {report['stages']['validation']['score']}/100")
         
         return report
-    
-    def _mock_correction(self, intent: str, failed_command: str, feedback: str) -> str:
-        """Mock correction function for testing"""
-        if "root" in str(feedback).lower() or "privileges" in str(feedback).lower():
-            if "sudo" not in failed_command:
-                return "sudo " + failed_command
-        return "nmap -sT -p 80,443 TARGET"
 
 
 # ============================================================================
@@ -273,14 +293,14 @@ app = FastAPI(title="Agent 5 MCP Server", version="1.0.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:3000",      # Vite dev server
-        "http://localhost:5173",      # Alternative Vite port
+        "http://localhost:3000",
+        "http://localhost:5173",
         "http://127.0.0.1:3000",
         "http://127.0.0.1:5173",
     ],
     allow_credentials=True,
-    allow_methods=["*"],  # Allow all methods (GET, POST, OPTIONS, etc.)
-    allow_headers=["*"],  # Allow all headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Initialize Agent 5 Pipeline
@@ -329,7 +349,7 @@ async def health_check():
         "external_services": {
             "agent5_mcp": {
                 "status": "online",
-                "url": "http://localhost:5000"
+                "url": "http://localhost:5002"
             }
         }
     }
@@ -385,7 +405,7 @@ async def mcp_execute(request: Request):
         agent_name = data.get("agent_name", "unknown")
         skip_sandbox = data.get("skip_sandbox", False)
         
-        print(f"\n📥 Received execution request:")
+        print(f"\n🔥 Received execution request:")
         print(f"   Intent: {intent}")
         print(f"   Command: {command}")
         print(f"   Target: {target}")
@@ -424,15 +444,13 @@ async def mcp_execute(request: Request):
 
 @app.get("/history")
 async def get_history():
-    """Get execution history (mock for now)"""
-    # TODO: Implement actual history storage
+    """Get execution history"""
     return []
 
 
 @app.get("/history/{entry_id}")
 async def get_history_entry(entry_id: str):
-    """Get specific history entry (mock for now)"""
-    # TODO: Implement actual history retrieval
+    """Get specific history entry"""
     return JSONResponse(
         status_code=404,
         content={"error": "History entry not found"}
@@ -457,7 +475,6 @@ if __name__ == "__main__":
         exit(1)
     
     try:
-        # Run FastAPI server on port 5002 (to avoid conflicts)
         uvicorn.run(
             app, 
             host="0.0.0.0", 

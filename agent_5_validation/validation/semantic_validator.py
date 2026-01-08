@@ -18,13 +18,6 @@ class SemanticValidationResult:
     technical_errors: List[str]
     score: float
 
-@dataclass
-class SemanticValidationResult:
-    matched_concepts: List[str]
-    missing_concepts: List[Dict]
-    conflicts: List[str]
-    technical_errors: List[str]
-    score: float
 
 class AdvancedSemanticValidator:
     """
@@ -112,7 +105,7 @@ class AdvancedSemanticValidator:
                 "detection_risk": "high"
             },
             "-A": {
-                "requires": "none",
+                "requires": "root",  # FIX: -A also requires root for -O
                 "conflicts": [],
                 "description": "Aggressive Scan (OS+Version+Script+Traceroute)",
                 "risk_level": "very_high",
@@ -224,7 +217,13 @@ class AdvancedSemanticValidator:
         score = 100.0
         score -= len(missing) * 20
         score -= len(conflicts) * 15
-        score -= len(technical_errors) * 25
+        
+        # FIX: Root privilege errors should lower score significantly
+        root_errors = [e for e in technical_errors if "root privileges" in e.lower()]
+        if root_errors:
+            score -= 30  # Major deduction for missing sudo
+        
+        score -= (len(technical_errors) - len(root_errors)) * 25
         
         return SemanticValidationResult(
             matched_concepts=matched,
@@ -258,14 +257,17 @@ class AdvancedSemanticValidator:
             if re.search(pattern, command):
                 present_flags.append(flag)
         
+        # FIX: Check if command starts with sudo
+        has_sudo = command.strip().startswith("sudo")
+        
         for flag in present_flags:
             rule = self.flag_rules[flag]
             
             # Check requirements
             if rule["requires"] == "root":
-                if not command.strip().startswith("sudo"):
+                if not has_sudo:
                     errors.append(
-                        f"{flag} requires root privileges (add 'sudo' or use alternative)"
+                        f"Flag {flag} requires root privileges - missing 'sudo' prefix"
                     )
             
             # Check conflicts

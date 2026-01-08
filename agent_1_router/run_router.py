@@ -1,7 +1,6 @@
-# Fichier: agent_1_router/run_router.py
 """
-RouterAgent - Central Orchestrator with CORS FIXED
-User Query → Complexity → Distributed RAG or Diffusion → MCP Agent 5 → Validation + Execution
+RouterAgent - Central Orchestrator 
+JSON Error Fix + Proper CORS + Lifespan Events
 """
 
 import sys
@@ -10,10 +9,12 @@ import asyncio
 import httpx
 from pathlib import Path
 from typing import Dict, Any
+from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 import uvicorn
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -22,7 +23,7 @@ from agent_1_router.comprehension import ComprehensionAgent
 from agent_1_router.complexity import ComplexityAgent
 from agent_1_router.distributed_routing import DistributedRAGClient
 
-# Import Hybrid Validator from Agent 5
+# Import Hybrid Validator
 sys.path.insert(0, str(Path(__file__).parent.parent / "agent_5_validation"))
 try:
     from agent_5_validation.validation.hybrid_validator import AdvancedHybridValidator
@@ -32,7 +33,7 @@ except ImportError:
 
 # Configuration
 COLLEAGUE_RAG_URL = "http://192.168.1.218:8000"
-MCP_AGENT5_URL = "http://localhost:5002"  # UPDATED PORT
+MCP_AGENT5_URL = "http://localhost:5002"
 
 # Colors
 GREEN = "\033[92m"
@@ -41,18 +42,30 @@ RED = "\033[91m"
 CYAN = "\033[96m"
 PURPLE = "\033[95m"
 RESET = "\033[0m"
-BOLD = "\033[1m"
 
+
+# ============================================================================
+# REQUEST MODELS
+# ============================================================================
+
+class RouteRequest(BaseModel):
+    query: str
+    target: str = "192.168.188.128"
+
+
+# ============================================================================
+# MCP CLIENT
+# ============================================================================
 
 class MCPClient:
     """Client for MCP Server (Agent 5)"""
     def __init__(self, mcp_url: str):
         self.base_url = mcp_url
-        self.client = httpx.AsyncClient(timeout=300.0)  # 5 minutes
+        self.client = httpx.AsyncClient(timeout=300.0)
     
     async def execute_command(self, command: str, intent: str, target: str, 
                             agent_name: str) -> Dict[str, Any]:
-        """Call MCP execute endpoint (validation + correction + sandbox + VM)"""
+        """Call MCP execute endpoint"""
         try:
             print(f"  {CYAN}[MCP] Calling /mcp/execute...{RESET}")
             
@@ -80,27 +93,9 @@ class MCPClient:
                 "stages": {"error": error_msg},
                 "timestamp": ""
             }
-        except httpx.TimeoutException as e:
-            error_msg = f"Timeout (exceeded {self.client.timeout}s): {str(e)}"
-            print(f"  {RED}[MCP] ✗ {error_msg}{RESET}")
-            return {
-                "final_status": "mcp_error",
-                "command": command,
-                "stages": {"error": error_msg},
-                "timestamp": ""
-            }
-        except httpx.HTTPStatusError as e:
-            error_msg = f"HTTP {e.response.status_code}: {e.response.text[:200]}"
-            print(f"  {RED}[MCP] ✗ {error_msg}{RESET}")
-            return {
-                "final_status": "mcp_error",
-                "command": command,
-                "stages": {"error": error_msg},
-                "timestamp": ""
-            }
         except Exception as e:
             error_msg = f"{type(e).__name__}: {str(e)}"
-            print(f"  {RED}[MCP] ✗ Unexpected error: {error_msg}{RESET}")
+            print(f"  {RED}[MCP] ✗ {error_msg}{RESET}")
             return {
                 "final_status": "mcp_error",
                 "command": command,
@@ -112,14 +107,12 @@ class MCPClient:
         await self.client.aclose()
 
 
+# ============================================================================
+# ROUTER AGENT
+# ============================================================================
+
 class RouterAgent:
-    """
-    Central Router:
-    1. Checks comprehension
-    2. Classifies complexity (Easy → RAG, Medium/Hard → Diffusion)
-    3. Routes to appropriate agent
-    4. Sends to MCP Agent 5 for execution
-    """
+    """Central Router with SLM Integration"""
     
     def __init__(self):
         print(f"{PURPLE}[*] Initializing RouterAgent...{RESET}")
@@ -128,11 +121,12 @@ class RouterAgent:
         self.comp_agent = ComprehensionAgent()
         self.complexity_agent = ComplexityAgent()
         
-        # Initialize Hybrid Validator if available
         if HYBRID_VALIDATOR_AVAILABLE:
             try:
-                self.validator = AdvancedHybridValidator(mistral_api_url="http://localhost:11434/v1/chat/completions")
-                print(f"{GREEN}✓ Hybrid Validator initialized{RESET}")
+                self.validator = AdvancedHybridValidator(
+                    mistral_api_url="http://192.168.11.1:1235/v1/chat/completions"  # Port 1235 for Mistral
+                )
+                print(f"{GREEN}✓ Hybrid Validator initialized (Mistral on port 1235){RESET}")
             except Exception as e:
                 print(f"{YELLOW}⚠ Hybrid Validator unavailable: {e}{RESET}")
                 self.validator = None
@@ -142,14 +136,7 @@ class RouterAgent:
         print(f"{GREEN}✓ RouterAgent ready{RESET}")
     
     async def route(self, user_query: str, target: str) -> Dict[str, Any]:
-        """
-        Main routing logic:
-        1. Comprehension check
-        2. Complexity classification
-        3. Agent selection (RAG or Diffusion)
-        4. Command generation
-        5. MCP execution (validation + correction + sandbox + VM)
-        """
+        """Main routing logic"""
         
         print(f"\n{CYAN}{'='*70}")
         print(f"ROUTER PIPELINE")
@@ -157,10 +144,10 @@ class RouterAgent:
         
         # STEP 1: Comprehension Check
         print(f"\n{CYAN}[STEP 1/4] COMPREHENSION CHECK{RESET}")
-        comp_result = self.comp_agent.analyze(user_query)
+        comp_result = await self.comp_agent.analyze(user_query)
         
         if not comp_result['relevant']:
-            print(f"  ❌ REJECTED. Score: {comp_result['score']:.2f}")
+            print(f"  ✗ REJECTED. Score: {comp_result['score']:.2f}")
             print(f"     Reason: {comp_result['reason']}")
             return {
                 "status": "rejected",
@@ -173,7 +160,7 @@ class RouterAgent:
         
         # STEP 2: Complexity Classification
         print(f"\n{CYAN}[STEP 2/4] COMPLEXITY CLASSIFICATION{RESET}")
-        complexity_result = self.complexity_agent.classify(user_query)
+        complexity_result = await self.complexity_agent.classify(user_query)
         
         level = complexity_result['level']
         level_color = GREEN if level == 'Easy' else YELLOW if level == 'Medium' else RED
@@ -182,9 +169,8 @@ class RouterAgent:
         print(f"  Level: {level_color}{level}{RESET}")
         print(f"  Confidence: {complexity_result['confidence']:.2f}")
         print(f"  Recommended Agent: {level_color}{agent_choice}{RESET}")
-        print(f"  Reasoning: {complexity_result['reason']}")
         
-        # STEP 3: Agent-Specific Command Generation
+        # STEP 3: Command Generation
         print(f"\n{CYAN}[STEP 3/4] COMMAND GENERATION ({agent_choice}){RESET}")
         
         if agent_choice == "RAG":
@@ -202,12 +188,7 @@ class RouterAgent:
         
         print(f"  Generated: {command}")
         
-        # Pre-validate using Hybrid Validator (optional enhancement)
-        if self.validator:
-            print(f"\n  {CYAN}[Pre-Validation] Running hybrid validation...{RESET}")
-            command = await self._validate_and_enhance_command(command, user_query, target)
-        
-        # STEP 4: MCP Execution (Agent 5 pipeline)
+        # STEP 4: MCP Execution
         print(f"\n{CYAN}[STEP 4/4] MCP EXECUTION (AGENT 5){RESET}")
         
         mcp_result = await self.mcp_client.execute_command(
@@ -217,71 +198,37 @@ class RouterAgent:
             agent_name=agent_choice.lower()
         )
         
-        # Display execution report
-        self._display_mcp_report(mcp_result)
-        
         return {
             "status": "executed",
             "relevant": True,
             "complexity": complexity_result,
-            "analysis": complexity_result,
             "agent": agent_choice,
             "command_generated": command,
-            "generated_command": command,
-            "generation_method": agent_choice,
-            "entry_id": f"entry_{int(asyncio.get_event_loop().time())}",
             "execution": mcp_result
         }
     
-    def _display_mcp_report(self, mcp_result: Dict[str, Any]):
-        """Display MCP execution report"""
-        report = mcp_result.get('stages', {})
-        
-        print(f"\n{YELLOW}{'─'*66}{RESET}")
-        print(f"{YELLOW}MCP EXECUTION REPORT{RESET}")
-        print(f"{YELLOW}{'─'*66}{RESET}")
-        
-        # Display stages...
-        # (Keep existing display logic from original file)
-        
-        final_status = mcp_result.get('final_status', 'unknown')
-        status_color = GREEN if final_status == 'success' else RED
-        print(f"\n{YELLOW}{'─'*66}{RESET}")
-        print(f"{status_color}{'✅ EXECUTION COMPLETED' if final_status == 'success' else '❌ EXECUTION FAILED'}{RESET}")
-        print(f"{YELLOW}{'─'*66}{RESET}\n")
-    
     async def _generate_rag_command(self, query: str, target: str) -> str:
-        """Generate command using colleague's RAG Agent"""
+        """Generate command using RAG"""
         try:
-            sys.path.insert(0, str(Path(__file__).parent.parent))
-            from agent_1_router.distributed_routing import DistributedRAGClient
-            
-            print(f"  {YELLOW}[Distributed Mode] Sending to colleague RAG...{RESET}")
-            
-            client = DistributedRAGClient(rag_url="http://192.168.1.218:8000")
+            client = DistributedRAGClient(rag_url=COLLEAGUE_RAG_URL)
             result = await client.generate_command(query=query, target=target)
             
             if result.get('status') == 'success':
                 command = result.get('command')
-                print(f"  {GREEN}[Colleague RAG] ✅ Command received: {command}{RESET}")
-                command = self._ensure_target_in_command(command, target)
-                return command
+                print(f"  {GREEN}[RAG] ✅ {command}{RESET}")
+                return self._ensure_target_in_command(command, target)
             else:
-                error_msg = result.get('error', 'Unknown error')
-                print(f"  ❌ Colleague RAG Error: {error_msg}")
+                print(f"  ✗ RAG Error: {result.get('error')}")
                 return None
         except Exception as e:
-            print(f"  ❌ Distributed RAG Exception: {e}")
-            print(f"  {YELLOW}[Fallback] Using basic nmap command...{RESET}")
+            print(f"  ✗ RAG Exception: {e}")
             return f"nmap -sV {target}"
     
     async def _generate_diffusion_command(self, query: str, target: str) -> str:
-        """Generate command using Diffusion Agent"""
+        """Generate command using Diffusion"""
         try:
             sys.path.insert(0, str(Path(__file__).parent.parent / "diffusion_models"))
             from discrete_diffusion_nmap import NmapDiscreteDiffusionLM, DiscreteDiffusionSampler
-            
-            print(f"  {YELLOW}[Diffusion] Generating command...{RESET}")
             
             model = NmapDiscreteDiffusionLM(model_name='t5-small', use_adapter=False)
             sampler = DiscreteDiffusionSampler(model, max_steps=15)
@@ -289,41 +236,16 @@ class RouterAgent:
             result = sampler.sample(query, verbose=False)
             command = result['final_command']
             
-            command = self._enhance_command_with_intent(command, query)
             command = self._ensure_target_in_command(command, target)
-            
-            print(f"  {GREEN}[Diffusion] ✅ Generated: {command}{RESET}")
+            print(f"  {GREEN}[Diffusion] ✅ {command}{RESET}")
             return command
             
         except Exception as e:
-            print(f"  ❌ Diffusion Error: {e}")
+            print(f"  ✗ Diffusion Error: {e}")
             return None
     
-    async def _validate_and_enhance_command(self, command: str, intent: str, target: str) -> str:
-        """Validate and enhance command"""
-        if not self.validator:
-            return command
-        
-        try:
-            print(f"\n  {CYAN}[Pre-Validation] Checking command quality...{RESET}")
-            result = await self.validator.validate(command=command, intent=intent, agent_name="router")
-            
-            score = result.final_score
-            print(f"    Validation Score: {score}/100")
-            
-            if score < 80:
-                enhanced = self._enhance_command_with_intent(command, intent)
-                if enhanced != command:
-                    command = enhanced
-                    print(f"    Enhanced: {command}")
-            
-            return command
-        except Exception as e:
-            print(f"    ⚠️ Validation skipped: {str(e)[:50]}")
-            return command
-    
     def _ensure_target_in_command(self, command: str, target: str) -> str:
-        """Ensure command includes target IP"""
+        """Ensure target is in command"""
         import re
         
         if not command:
@@ -341,43 +263,44 @@ class RouterAgent:
         
         return command.strip()
     
-    def _enhance_command_with_intent(self, command: str, intent: str) -> str:
-        """Enhance command based on intent keywords"""
-        if not command or not intent:
-            return command
-        
-        intent_lower = intent.lower()
-        intent_flags = {
-            'fragmentation': '-f',
-            'fragment': '-f',
-            'stealth': '-sS',
-            'syn': '-sS',
-            'fingerprint': '-O',
-            'os detection': '-O',
-            'version': '-sV',
-            'service': '-sV',
-            'script': '--script',
-            'vulnerability': '--script vuln',
-        }
-        
-        for keyword, flag in intent_flags.items():
-            if keyword in intent_lower and flag not in command:
-                if command.strip().startswith('nmap'):
-                    command = command.replace('nmap', f'nmap {flag}', 1)
-        
-        return command.strip()
-    
     async def close(self):
         await self.mcp_client.close()
+        await self.comp_agent.close()
+        await self.complexity_agent.close()
 
 
 # ============================================================================
-# FASTAPI APPLICATION WITH CORS
+# FASTAPI APPLICATION WITH LIFESPAN
 # ============================================================================
 
-app = FastAPI(title="Router Agent", version="1.0.0")
+router_agent = None
 
-# CRITICAL: Add CORS middleware
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan context manager (replaces on_event)"""
+    global router_agent
+    
+    # Startup
+    print("\n" + "="*70)
+    print("🚀 Starting Router Agent...")
+    print("="*70)
+    router_agent = RouterAgent()
+    
+    yield
+    
+    # Shutdown
+    if router_agent:
+        await router_agent.close()
+    print("\n🛑 Router Agent stopped")
+
+
+app = FastAPI(
+    title="Router Agent",
+    version="1.0.0",
+    lifespan=lifespan
+)
+
+# CORS Middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -391,57 +314,48 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-router_agent = None
-
-@app.on_event("startup")
-async def startup_event():
-    global router_agent
-    print("\n" + "="*70)
-    print("🚀 Starting Router Agent...")
-    print("="*70)
-    router_agent = RouterAgent()
-
 
 @app.get("/")
 async def root():
     return {"service": "Router Agent", "status": "online"}
 
 
+@app.get("/health")
+async def health():
+    return {
+        "status": "online" if router_agent else "initializing",
+        "slm_port": 1234,
+        "agent5_port": 5002
+    }
+
+
 @app.post("/route")
-async def route_endpoint(request: Request):
-    """Main routing endpoint"""
+async def route_endpoint(request: RouteRequest):
+    """Main routing endpoint - FIXED JSON parsing"""
     if router_agent is None:
-        return JSONResponse(
-            status_code=503,
-            content={"error": "Router agent not initialized"}
-        )
+        raise HTTPException(status_code=503, detail="Router agent not initialized")
     
     try:
-        data = await request.json()
-        user_query = data.get("query")
-        target = data.get("target", "192.168.188.128")
+        print(f"\n🔥 Received routing request:")
+        print(f"   Query: {request.query}")
+        print(f"   Target: {request.target}")
         
-        print(f"\n📥 Received routing request:")
-        print(f"   Query: {user_query}")
-        print(f"   Target: {target}")
-        
-        result = await router_agent.route(user_query, target)
+        result = await router_agent.route(request.query, request.target)
         return result
         
     except Exception as e:
-        print(f"❌ Route error: {e}")
+        print(f"✗ Route error: {e}")
         import traceback
         traceback.print_exc()
-        return JSONResponse(
-            status_code=500,
-            content={"error": str(e)}
-        )
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 if __name__ == "__main__":
     print("""
     ╔═══════════════════════════════════════════════════════════════╗
     ║                   ROUTER AGENT WITH CORS                      ║
+    ║           Qwen2.5-Coder-3B on Port 1234 (Agent 1)             ║
+    ║           Mistral-7B on Port 1235 (Agent 5)                   ║
     ╚═══════════════════════════════════════════════════════════════╝
     """)
     
