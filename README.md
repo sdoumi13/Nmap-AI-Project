@@ -22,7 +22,7 @@ pip install -r requirements.txt
 python agent_1_router/run_router.py
 ```
 
-##  Corpus Enrichis
+##  Corpus
 
 ### 1. RAG Corpus (rag_corpus_detailed.json)
 - **15 entrées** avec contexte, explications, prérequis, temps d'exécution
