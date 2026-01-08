@@ -9,9 +9,9 @@
 
 Ce projet implémente un système intelligent de routage pour la génération de commandes Nmap basé sur 3 corpus détaillés :
 
-### 📁 Structure
 
 ```
+<<<<<<< HEAD
 Nmap-AI-Project/
 ├── agent_1_router/
 │   ├── __init__.py
@@ -44,6 +44,8 @@ agent5_validation+self-correction-sandboxing-testVM/
 ├── requirements.txt
 └── README.md
 ```
+=======
+>>>>>>> b788b47490d84202b2ece0f2883cc667e4a8180d
 
 ## Installation
 
@@ -57,7 +59,7 @@ python agent5_validation/run_agent5.py
 python agent5_validation/mcp_tools/mcp_server.py   
 ```
 
-##  Corpus Enrichis
+##  Corpus
 
 ### 1. RAG Corpus (rag_corpus_detailed.json)
 - **15 entrées** avec contexte, explications, prérequis, temps d'exécution
@@ -74,7 +76,11 @@ python agent5_validation/mcp_tools/mcp_server.py
 - Prêt pour entraînement de modèles seq2seq
 - Niveaux de complexité 1-10
 
+<<<<<<< HEAD
 ##  Fonctionnement
+=======
+## Fonctionnement
+>>>>>>> b788b47490d84202b2ece0f2883cc667e4a8180d
 
 1. **Comprehension Agent** : Analyse la requête avec TF-IDF + SBERT sur le corpus RAG
 2. **Complexity Agent** : Classifie en Easy/Medium/Hard selon les patterns détectés
