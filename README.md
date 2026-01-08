@@ -9,44 +9,7 @@
 
 Ce projet implémente un système intelligent de routage pour la génération de commandes Nmap basé sur 3 corpus détaillés :
 
-### 📁 Structure
 
-```
-Nmap-AI-Project/
-├── agent_1_router/
-│   ├── __init__.py
-│   ├── comprehension.py      # TF-IDF & SBERT Filter (utilise RAG corpus)
-│   ├── complexity.py          # Classification Easy/Medium/Hard (utilise Fine-tuning corpus)
-│   └── run_router.py          # Point d'entrée principal
-├── datasets/
-│   ├── rag_corpus_detailed.json           # Corpus pour RAG (15 entrées enrichies)
-│   ├── finetuning_corpus_detailed.json    # Corpus pour Fine-tuning (5 conversations)
-│   └── diffusion_corpus_detailed.json
-agent5(validation+self-correction-sandboxing-testVM/
-├── __init__.py
-├── validation/
-│   ├── __init__.py
-│   ├── semantic_validator.py      # Step 1: Semantic rules
-│   ├── llm_judge.py                # Step 2: LLM fallback
-│   └── hybrid_validator.py         # Step 3: Combined validation
-├── mcp/
-│   ├── __init__.py
-│   ├── protocol.py                 # Step 4: MCP message schemas
-│   ├── server.py                   # Step 5: MCP server
-│   └── client.py                   # Step 6: MCP client
-├── execution/
-│   ├── __init__.py
-│   ├── sandbox_executor.py         # Step 7: Docker sandbox
-│   └── vm_executor.py              # Step 8: VM execution
-├── self_correction/
-│   ├── __init__.py
-│   └── corrector.py                # Step 9: Self-correction loop
-└── orchestrator.py                 # Step 10: Main orchestrator
-"""
-
-   # Corpus pour Diffusion (20 paires)
-├── requirements.txt
-└── README.md
 ```
 
 ## Installation
@@ -76,7 +39,7 @@ python agent_1_router/run_router.py
 - Prêt pour entraînement de modèles seq2seq
 - Niveaux de complexité 1-10
 
-## 🎯 Fonctionnement
+## Fonctionnement
 
 1. **Comprehension Agent** : Analyse la requête avec TF-IDF + SBERT sur le corpus RAG
 2. **Complexity Agent** : Classifie en Easy/Medium/Hard selon les patterns détectés
