@@ -5,8 +5,8 @@
 - **Role 1:** DOUMI SALMA — Complexity Agent & Validation (MCP) Agent
 - **Role 2:** — AFROUKH ABDELLAH \_ Nmap Discrete Diffusion Agent
 - **Role 3:** — NACIRI AYMANE - FRONTEND DEVELOPPER + BACKEND/FRONTEND APIS
-- **Role 4:** —
-- **Role 5:** —
+- **Role 4:** — Aymane Moutmaine — RAG Agent
+- **Role 5:** — BAY BAY BADR - Fine-tuning Agent
 
 ---
 
@@ -42,12 +42,12 @@ User Query → Comprehension → Complexity → Routing → MCP Execution
 
 ### Rôle Principal
 
-| Étape                | Fonction                | Objectif                               |
-| -------------------- | ----------------------- | -------------------------------------- |
-| **1. Comprehension** | Filtre les requêtes     | Rejeter le bruit non-Nmap              |
-| **2. Complexity**    | Classifie la difficulté | Easy / Medium / Hard                   |
-| **3. Routing**       | Sélectionne l'agent     | RAG (simple) /LoRA-fine-tuned T5-small-Phi-4 /Diffusion (complexe)   |
-| **4. Execution**     | Envoie à Agent 5        | Validation + Correction + Sandbox + VM |
+| Étape                | Fonction                | Objectif                                                           |
+| -------------------- | ----------------------- | ------------------------------------------------------------------ |
+| **1. Comprehension** | Filtre les requêtes     | Rejeter le bruit non-Nmap                                          |
+| **2. Complexity**    | Classifie la difficulté | Easy / Medium / Hard                                               |
+| **3. Routing**       | Sélectionne l'agent     | RAG (simple) /LoRA-fine-tuned T5-small-Phi-4 /Diffusion (complexe) |
+| **4. Execution**     | Envoie à Agent 5        | Validation + Correction + Sandbox + VM                             |
 
 ---
 
@@ -377,6 +377,182 @@ python run_router.py
 ```
 
 ---
+# Agent 5: Validation & Self-Correction Architecture
+
+## MCP Protocol 
+
+### Overview of the MCP Protocol
+
+The **MCP (Model Context Protocol)** is the communication backbone used to securely and consistently exchange data between **Agent 1 (Router)** and **Agent 5 (Validation & Execution Agent)**.
+
+In the Nmap-AI system, MCP acts as a **control and governance layer** that ensures every generated Nmap command is:
+- Semantically valid
+- Security-compliant
+- Safely executable
+- Fully traceable
+
+MCP is **not a simple API call**, but a structured protocol that defines:
+- Message format
+- Validation states
+- Execution permissions
+- Feedback loops
+
+---
+
+![Validation & Self-Correction Flow](/Annexe//validation+self-correction.png)
+
+---
+
+##  System Architecture
+
+```
+agent5_validation+self-correction-sandboxing-testVM/
+├── __init__.py
+├── validation/
+│   ├── __init__.py
+│   ├── semantic_validator.py      # Step 1: Rule-based validation
+│   ├── llm_judge.py                # Step 2: LLM-based validation
+│   └── hybrid_validator.py         # Step 3: Combined validation
+├── mcp_tools/
+│   ├── __init__.py
+│   └── mcp_server.py              # Step 4-5-6: MCP server interface
+├── execution/
+│   ├── __init__.py
+│   ├── sandbox_executor.py         # Step 7: Docker sandbox
+│   └── vm_executor.py              # Step 8: VM SSH execution
+├── self_correction/
+│   ├── __init__.py
+│   └── corrector.py                # Step 9: Self-correction agent
+├── run_agent5.py                   # Step 10: Main orchestrator
+└── agent5_config.yaml              # Configuration file
+```
+
+### Running the System
+
+```bash
+# Start Agent 5 MCP Server (Port 5002)
+python run_agent5.py
+
+# Or start MCP server independently
+python mcp_tools/mcp_server.py
+```
+
+---
+
+##  Validation Pipeline
+
+### 1. Semantic Validator (Rule-Based)
+
+**Purpose**: Fast, deterministic validation using regex patterns and semantic rules.
+
+**Key Features**:
+-  Detects dangerous commands (rm -rf, fork bombs)
+-  Validates root privilege requirements
+-  Checks target presence (IP/domain)
+-  Identifies flag conflicts (-sS vs -sT)
+-  Validates port syntax
+
+---
+
+### 2. LLM Judge (Qwen2.5-Coder-3B / Mistral-7B)
+![LLM](/Annexe//LLM.png)
+
+**Purpose**: Intelligent validation using language models for complex cases.
+
+**Models Used**:
+- **Qwen2.5-Coder-3B** (Port 1234) - Primary LLM judge
+- **Mistral-7B** (Fallback) - Alternative validation
+
+**Features**:
+-  Context-aware validation
+-  Intent matching verification
+-  Confidence scoring
+- 💡 Detailed reasoning
+
+---
+
+### 3. Hybrid Validator (Combined Approach)
+
+**Purpose**: Best of both worlds - fast semantic rules + intelligent LLM validation.
+
+**Decision Matrix**:
+| Semantic Score | LLM Score | Final Status |
+|----------------|-----------|--------------|
+| 100            | -         | VALID      |
+| 70 (root err)  | -         | RECOVERABLE 🔧 |
+| < 50           | -         | INVALID ❌   |
+| 60-79          | 80-100    | VALID      |
+| 60-79          | 50-79     | RECOVERABLE 🔧 |
+
+---
+![Validation](/Annexe//Validation.png)
+
+## 🔧 Self-Correction Mechanism
+
+### Corrector Algorithm
+
+**Purpose**: Automatically fix recoverable command errors.
+
+**Flow Chart**:
+```
+┌─────────────────────┐
+│  Invalid Command    │
+│  (RECOVERABLE)      │
+└──────────┬──────────┘
+           │
+           ▼
+┌─────────────────────┐
+│ Analyze Error Type  │
+└──────────┬──────────┘
+           │
+           ├─► Root Privilege Error    → Add 'sudo'
+           ├─► Missing Target          → Add IP/TARGET
+           ├─► Flag Conflict           → Remove conflicting flag
+           ├─► Invalid Port Syntax     → Fix comma separation
+           ├─► Missing Required Flag   → Add based on intent
+           ├─► Invalid Decoy Format    → Fix to RND:10
+           └─► Multiple Timing Flags   → Keep only one
+           
+           ▼
+┌─────────────────────┐
+│  Apply Fix          │
+└──────────┬──────────┘
+           │
+           ▼
+┌─────────────────────┐
+│  Re-Validate        │
+└──────────┬──────────┘
+           │
+           ├─► VALID (score ≥ 75)     →  Success
+           ├─► Still Invalid          →  Retry (max 2)
+           └─► Max Retries            →  Return best attempt
+```
+
+---
+
+##  Security Features
+
+1. **Dangerous Command Detection**: Blocks rm, dd, fork bombs
+2. **Docker Isolation**: Sandboxed execution before VM
+3. **SSH Hardening**: Secure VM communication
+4. **Input Validation**: Multiple layers of checks
+5. **Rate Limiting**: Prevents abuse (30 req/min)
+
+---
+
+> **MCP transforms LLM-generated commands into controlled, auditable, and secure operations.**  
+It is the cornerstone that makes Nmap-AI suitable for **real-world cybersecurity environments**.
+
+##  References
+
+- Nmap Documentation: https://nmap.org/book/
+- Docker Security: https://docs.docker.com/engine/security/
+- LLM Validation Papers
+- Semantic Validation 
+
+---
+
+
 
 ## APP- Router Example
 
@@ -615,50 +791,203 @@ Fonctionnalités Principales
 1️⃣ Dashboard (Dashboard.tsx)
 
        📊 Vue globale du système
-       
+
        🤖 État des agents (Router, RAG, Diffusion, MCP)
-       
+
        📈 Statistiques en temps réel
-       
+
        🕒 Historique des commandes générées
-       
+
        ⏱️ Graphiques de performance (temps de réponse par agent)
 
 2️⃣ Router Page (RouterPage.tsx)
 
        🧠 Saisie de requêtes en langage naturel
-       
+
        🔁 Visualisation du pipeline multi-agents :
 
        Comprehension → Complexity → Routing → Generation → Validation
        Résultats détaillés :
 
               Commande Nmap générée
-              
+
               Niveau de complexité détecté
-              
+
               Agent sélectionné (RAG / LoRA-T5 / Diffusion)
-              
+
               Logs de validation MCP
-              
+
               Résultats d’exécution
 
 3️⃣ Composants Réutilisables
 
 Layout.tsx : Structure globale (header, navigation)
-       
+
 RobotPipeline.tsx : Visualisation interactive du pipeline
-       
+
 ⚙️ Installation & Démarrage
 ✅ Prérequis
 
        Node.js 18+
        npm      États en temps réel pour chaque agent
-       
-📦 Installation
+
+ Installation
 cd frontend
 npm install
 
-▶️ Lancement en développement
+ Lancement en développement
 npm run dev
 Application accessible sur : 👉 http://localhost:3000
+
+---
+
+# Nmap RAG Agent
+
+## Overview
+
+Generates Nmap commands from natural language using Retrieval-Augmented Generation (RAG) with:
+
+- HuggingFace embeddings (`all-MiniLM-L6-v2`)
+- Chroma vector database (persisted locally)
+- Ollama LLM (`llama3:8b`) for command synthesis
+
+## API Endpoints
+
+- POST `/generate_command` → Generate Nmap command from `query` and `target`
+- GET `/health` → Service health check
+
+## Run Server
+
+Start the FastAPI server listening on your LAN:
+
+```bash
+python RAG/server.py
+```
+
+or with Uvicorn:
+
+```bash
+uvicorn RAG.server:app --host 0.0.0.0 --port 8000
+```
+
+## Test from another machine
+
+Use your machine IP (example: `192.168.1.141`):
+
+```bash
+curl -X POST http://192.168.1.141:8000/generate_command \
+  -H "Content-Type: application/json" \
+  -d '{"query":"scan all open ports","target":"192.168.1.1"}'
+```
+
+PowerShell alternative:
+
+```powershell
+Invoke-RestMethod -Uri "http://192.168.1.141:8000/generate_command" -Method POST -ContentType "application/json" -Body '{"query":"scan all open ports","target":"192.168.1.1"}'
+```
+
+Expected response:
+
+```json
+{
+  "status": "success",
+  "command": "nmap -p- 192.168.1.1",
+  "intent": "scan all open ports",
+  "target": "192.168.1.1",
+  "agent": "RAG",
+  "confidence": 0.8
+}
+```
+
+# 🤖 Fine-tuned Agent - Phi3 mini Model ~3.8B parameters
+
+An intelligent Fine-Tuned Agent designed to translate natural language requests into precise, syntax-accurate `nmap` commands. This agent serves as the "Tactical Specialist" in the multi-agent ecosystem.
+
+##  Model Architecture
+
+- **Base Model**: Phi-3 Mini (~3.8B parameters)
+- **Fine-Tuning**: Trained using LoRA (Low-Rank Adaptation) for domain-specific mastery of network security syntax
+- **Optimization**: 4-bit NF4 Quantization via `bitsandbytes`, enabling high-speed inference on consumer-grade GPUs (~4-6GB VRAM)
+
+## 🚀 Key Features
+
+- **Contextual Translation**: Converts complex scanning intents (e.g., "Find all web servers") into optimized flags (`nmap -p 80,443...`)
+- **FastAPI Integration**: Provides a high-performance REST API for seamless communication with other agents
+- **Hardware Accelerated**: Full CUDA support for near-instant command generation (~1-2s)
+
+## 🛠 Quick Start
+
+1. **Dependencies**:
+
+```bash
+   pip install torch transformers peft fastapi bitsandbytes
+```
+
+2. **Model Setup**:
+
+   - Place Phi-3 base weights in `C:\models\phi3_mini`
+   - Place LoRA adapters in `./phi3-nmap-results`
+
+3. **Launch**:
+
+```bash
+   uvicorn app:app --host 0.0.0.0 --port 8000
+```
+
+## 📡 Agent API
+
+- **Endpoint**: `POST /generate`
+- **Input**:
+
+```json
+{ "prompt": "Scan 192.168.1.0/24 for OS version" }
+```
+
+- **Output**:
+
+```json
+{ "nmap_command": "nmap -O 192.168.1.0/24" }
+```
+
+##  Repository Structure
+
+```
+.
+├── app.py                          # FastAPI agent interface
+├── phi3-nmap-results/              # Pre-trained LoRA adapter checkpoints
+├── nmap_dataset_augmented.json     # Curated cybersecurity training data
+├── Finetuning Script.ipynb         # Training code
+└── app.py                          # Core inference logic for the fine-tuned model
+```
+
+##  Usage Example
+
+```python
+import requests
+
+response = requests.post(
+    "http://localhost:8000/generate",
+    json={"prompt": "Find all web servers with SSL on network 10.0.0.0/24"}
+)
+
+print(response.json()["nmap_command"])
+# Output: nmap -p 443 --script ssl-cert 10.0.0.0/24
+```
+
+##  Training Details
+
+- **Dataset**: Custom cybersecurity corpus with 10,000+ nmap command pairs
+- **Training Duration**: ~2 hours on RTX ADA 2000 8GB Vram
+- **LoRA Parameters**: r=16, alpha=32, dropout=0.05
+- **Validation Accuracy**: 94.2% syntax correctness
+
+##  Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+##  Disclaimer
+
+This tool is intended for authorized security testing only. Always obtain proper authorization before scanning networks.
+
+---
+
