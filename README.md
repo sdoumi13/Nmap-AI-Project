@@ -28,7 +28,6 @@ python agent5_validation/run_agent5.py
 python agent5_validation/mcp_tools/mcp_server.py 
 
 ```
-## DOUMI SALMA 
 
 #  Agent 1 - Router Agent
 
@@ -298,8 +297,6 @@ agent_1_router/
 │  └────────────────────────────────────┘             │
 └─────────────────────────────────────────────────────┘
 ```
-
-#### Classe Principale
 
 ---
 
