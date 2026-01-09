@@ -4,7 +4,7 @@
 
 - **Role 1:** DOUMI SALMA — Complexity Agent & Validation (MCP) Agent
 - **Role 2:** — AFROUKH ABDELLAH \_ Nmap Discrete Diffusion Agent
-- **Role 3:** —
+- **Role 3:** — NACIRI AYMANE - FRONTEND DEVELOPPER + BACKEND/FRONTEND APIS
 - **Role 4:** —
 - **Role 5:** —
 
