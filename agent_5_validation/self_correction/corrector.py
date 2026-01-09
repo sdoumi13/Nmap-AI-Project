@@ -1,6 +1,5 @@
 """
-Simplified Self-Correction Agent
-Focuses on the most common Nmap command errors
+Self-Correction Agent
 """
 from typing import Tuple, List, Callable, Any
 import re
