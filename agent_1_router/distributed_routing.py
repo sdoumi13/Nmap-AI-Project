@@ -93,6 +93,73 @@ class DistributedRAGClient:
         await self.client.aclose()
 
 
+class FineTuningClient:
+    """
+    Client for Fine-Tuning Agent
+    Handles medium complexity command generation via ngrok endpoint
+    """
+    
+    def __init__(self, finetuning_url: str = "https://fa4b211dce60.ngrok-free.app"):
+        self.base_url = finetuning_url
+        self.client = httpx.AsyncClient(timeout=60.0, verify=False)  # Disable SSL verification for ngrok
+    
+    async def generate_command(self, query: str, target: str) -> Dict[str, Any]:
+        """Generate command using fine-tuned model"""
+        try:
+            print(f"{YELLOW}[FineTuning] Generating medium complexity command...{RESET}")
+            
+            # Combine query and target into a single prompt
+            prompt = f"{query} on {target}" if target else query
+            
+            response = await self.client.post(
+                f"{self.base_url}/generate",
+                json={"prompt": prompt},
+                headers={"Content-Type": "application/json"}
+            )
+            response.raise_for_status()
+            
+            result = response.json()
+            nmap_command = result.get('nmap_command', '')
+            print(f"{GREEN}[FineTuning] ✅ Command: {nmap_command}{RESET}")
+            
+            # Format response to match expected structure
+            return {
+                "command": nmap_command,
+                "status": "success",
+                "source": "finetuning",
+                "timestamp": datetime.now().isoformat()
+            }
+            
+        except httpx.HTTPError as e:
+            error_msg = f"Fine-tuning generation failed: {str(e)}"
+            print(f"{RED}[FineTuning] ❌ {error_msg}{RESET}")
+            
+            return {
+                "status": "error",
+                "error": error_msg,
+                "timestamp": datetime.now().isoformat()
+            }
+    
+    async def health_check(self) -> bool:
+        """Check if fine-tuning service is available"""
+        try:
+            response = await self.client.get(
+                f"{self.base_url}/health",
+                timeout=5.0
+            )
+            is_healthy = response.status_code == 200
+            status = "🟢 ONLINE" if is_healthy else "🔴 OFFLINE"
+            print(f"{CYAN}[FineTuning] {status} - ngrok endpoint{RESET}")
+            return is_healthy
+        except:
+            print(f"{RED}[FineTuning] 🔴 OFFLINE - ngrok endpoint{RESET}")
+            return False
+    
+    async def close(self):
+        """Close HTTP client"""
+        await self.client.aclose()
+
+
 class LocalDiffusionClient:
     """
     Client for local Diffusion Agent
@@ -140,14 +207,16 @@ class LocalDiffusionClient:
 class DistributedRouter:
     """
     Smart routing logic based on complexity classification
-    Routes to colleague's RAG or local Diffusion
+    Routes to colleague's RAG, Fine-Tuning, or local Diffusion
     """
     
     def __init__(self, 
                  rag_colleague_url: str = "http://192.168.1.218:8000",
+                 finetuning_url: str = "https://fa4b211dce60.ngrok-free.app",
                  diffusion_local_url: str = "http://192.168.1.169:9000"):
         
         self.rag_colleague = DistributedRAGClient(rag_colleague_url)
+        self.finetuning = FineTuningClient(finetuning_url)
         self.diffusion_local = LocalDiffusionClient(diffusion_local_url)
     
     async def route_to_agent(self, query: str, target: str, 
@@ -155,8 +224,11 @@ class DistributedRouter:
         """
         Route query to appropriate agent based on complexity
         
-        SIMPLE/MEDIUM (confidence > 0.7)
+        SIMPLE (confidence > 0.7)
         └─→ Colleague's RAG (192.168.1.218)
+        
+        MEDIUM (confidence > 0.7)
+        └─→ Fine-Tuning Service (localhost:8500)
         
         COMPLEX
         └─→ Your Diffusion (192.168.1.169)
@@ -166,18 +238,31 @@ class DistributedRouter:
         print(f"ROUTING DECISION: {complexity} (confidence: {confidence:.0%})")
         print(f"{'='*60}{RESET}")
         
-        if complexity in ["SIMPLE", "MEDIUM"] and confidence > 0.7:
+        if complexity == "SIMPLE" and confidence > 0.7:
             # Route to colleague's RAG
             print(f"{CYAN}→ Routing to COLLEAGUE'S RAG (192.168.1.218:8000){RESET}")
             
             result = await self.rag_colleague.generate_command(query, target)
             
             if result.get("status") == "error":
-                print(f"{YELLOW}[Router] RAG failed, falling back to local Diffusion...{RESET}")
-                result = await self.diffusion_local.generate_command(query, target)
+                print(f"{YELLOW}[Router] RAG failed, falling back to Fine-Tuning...{RESET}")
+                result = await self.finetuning.generate_command(query, target)
             
             result["source_agent"] = "RAG_COLLEAGUE"
             result["source_ip"] = "192.168.1.218"
+            
+        elif complexity == "MEDIUM" and confidence > 0.7:
+            # Route to Fine-Tuning service
+            print(f"{CYAN}→ Routing to FINE-TUNING (localhost:8500){RESET}")
+            
+            result = await self.finetuning.generate_command(query, target)
+            
+            if result.get("status") == "error":
+                print(f"{YELLOW}[Router] Fine-Tuning failed, falling back to Diffusion...{RESET}")
+                result = await self.diffusion_local.generate_command(query, target)
+            
+            result["source_agent"] = "FINETUNING"
+            result["source_ip"] = "localhost"
             
         else:
             # Route to local Diffusion
@@ -195,6 +280,7 @@ class DistributedRouter:
         
         health = {
             "colleague_rag": await self.rag_colleague.health_check(),
+            "finetuning": await self.finetuning.health_check(),
             "local_diffusion": True  # Assume local is available for now
         }
         
@@ -203,4 +289,5 @@ class DistributedRouter:
     async def close(self):
         """Close all client connections"""
         await self.rag_colleague.close()
+        await self.finetuning.close()
         await self.diffusion_local.close()
