@@ -5,7 +5,7 @@
 - **Role 1:** DOUMI SALMA — Complexity Agent & Validation (MCP) Agent
 - **Role 2:** — AFROUKH ABDELLAH \_ Nmap Discrete Diffusion Agent
 - **Role 3:** — NACIRI AYMANE - FRONTEND DEVELOPPER + BACKEND/FRONTEND APIS
-- **Role 4:** —
+- **Role 4:** — Aymane Moutmaine — RAG Agent
 - **Role 5:** —
 
 ---
@@ -42,12 +42,12 @@ User Query → Comprehension → Complexity → Routing → MCP Execution
 
 ### Rôle Principal
 
-| Étape                | Fonction                | Objectif                               |
-| -------------------- | ----------------------- | -------------------------------------- |
-| **1. Comprehension** | Filtre les requêtes     | Rejeter le bruit non-Nmap              |
-| **2. Complexity**    | Classifie la difficulté | Easy / Medium / Hard                   |
-| **3. Routing**       | Sélectionne l'agent     | RAG (simple) /LoRA-fine-tuned T5-small-Phi-4 /Diffusion (complexe)   |
-| **4. Execution**     | Envoie à Agent 5        | Validation + Correction + Sandbox + VM |
+| Étape                | Fonction                | Objectif                                                           |
+| -------------------- | ----------------------- | ------------------------------------------------------------------ |
+| **1. Comprehension** | Filtre les requêtes     | Rejeter le bruit non-Nmap                                          |
+| **2. Complexity**    | Classifie la difficulté | Easy / Medium / Hard                                               |
+| **3. Routing**       | Sélectionne l'agent     | RAG (simple) /LoRA-fine-tuned T5-small-Phi-4 /Diffusion (complexe) |
+| **4. Execution**     | Envoie à Agent 5        | Validation + Correction + Sandbox + VM                             |
 
 ---
 
@@ -615,46 +615,46 @@ Fonctionnalités Principales
 1️⃣ Dashboard (Dashboard.tsx)
 
        📊 Vue globale du système
-       
+
        🤖 État des agents (Router, RAG, Diffusion, MCP)
-       
+
        📈 Statistiques en temps réel
-       
+
        🕒 Historique des commandes générées
-       
+
        ⏱️ Graphiques de performance (temps de réponse par agent)
 
 2️⃣ Router Page (RouterPage.tsx)
 
        🧠 Saisie de requêtes en langage naturel
-       
+
        🔁 Visualisation du pipeline multi-agents :
 
        Comprehension → Complexity → Routing → Generation → Validation
        Résultats détaillés :
 
               Commande Nmap générée
-              
+
               Niveau de complexité détecté
-              
+
               Agent sélectionné (RAG / LoRA-T5 / Diffusion)
-              
+
               Logs de validation MCP
-              
+
               Résultats d’exécution
 
 3️⃣ Composants Réutilisables
 
 Layout.tsx : Structure globale (header, navigation)
-       
+
 RobotPipeline.tsx : Visualisation interactive du pipeline
-       
+
 ⚙️ Installation & Démarrage
 ✅ Prérequis
 
        Node.js 18+
        npm      États en temps réel pour chaque agent
-       
+
 📦 Installation
 cd frontend
 npm install
@@ -662,3 +662,63 @@ npm install
 ▶️ Lancement en développement
 npm run dev
 Application accessible sur : 👉 http://localhost:3000
+
+---
+
+# Nmap RAG Agent
+
+## Overview
+
+Generates Nmap commands from natural language using Retrieval-Augmented Generation (RAG) with:
+
+- HuggingFace embeddings (`all-MiniLM-L6-v2`)
+- Chroma vector database (persisted locally)
+- Ollama LLM (`llama3:8b`) for command synthesis
+
+## API Endpoints
+
+- POST `/generate_command` → Generate Nmap command from `query` and `target`
+- GET `/health` → Service health check
+
+## Run Server
+
+Start the FastAPI server listening on your LAN:
+
+```bash
+python RAG/server.py
+```
+
+or with Uvicorn:
+
+```bash
+uvicorn RAG.server:app --host 0.0.0.0 --port 8000
+```
+
+## Test from another machine
+
+Use your machine IP (example: `192.168.1.141`):
+
+```bash
+curl -X POST http://192.168.1.141:8000/generate_command \
+  -H "Content-Type: application/json" \
+  -d '{"query":"scan all open ports","target":"192.168.1.1"}'
+```
+
+PowerShell alternative:
+
+```powershell
+Invoke-RestMethod -Uri "http://192.168.1.141:8000/generate_command" -Method POST -ContentType "application/json" -Body '{"query":"scan all open ports","target":"192.168.1.1"}'
+```
+
+Expected response:
+
+```json
+{
+  "status": "success",
+  "command": "nmap -p- 192.168.1.1",
+  "intent": "scan all open ports",
+  "target": "192.168.1.1",
+  "agent": "RAG",
+  "confidence": 0.8
+}
+```
