@@ -21,7 +21,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from agent_1_router.comprehension import ComprehensionAgent
 from agent_1_router.complexity import ComplexityAgent
-from agent_1_router.distributed_routing import DistributedRAGClient
+from agent_1_router.distributed_routing import DistributedRAGClient, FineTuningClient
 
 # Import Hybrid Validator
 sys.path.insert(0, str(Path(__file__).parent.parent / "agent_5_validation"))
@@ -33,6 +33,7 @@ except ImportError:
 
 # Configuration
 COLLEAGUE_RAG_URL = "http://192.168.1.218:8000"
+FINETUNING_URL = "https://fa4b211dce60.ngrok-free.app"
 MCP_AGENT5_URL = "http://localhost:5002"
 
 # Colors
@@ -164,7 +165,13 @@ class RouterAgent:
         
         level = complexity_result['level']
         level_color = GREEN if level == 'Easy' else YELLOW if level == 'Medium' else RED
-        agent_choice = "RAG" if level == "Easy" else "DIFFUSION"
+        
+        if level == "Easy":
+            agent_choice = "RAG"
+        elif level == "Medium":
+            agent_choice = "FINETUNING"
+        else:
+            agent_choice = "DIFFUSION"
         
         print(f"  Level: {level_color}{level}{RESET}")
         print(f"  Confidence: {complexity_result['confidence']:.2f}")
@@ -175,6 +182,8 @@ class RouterAgent:
         
         if agent_choice == "RAG":
             command = await self._generate_rag_command(user_query, target)
+        elif agent_choice == "FINETUNING":
+            command = await self._generate_finetuning_command(user_query, target)
         else:
             command = await self._generate_diffusion_command(user_query, target)
         
@@ -222,6 +231,23 @@ class RouterAgent:
                 return None
         except Exception as e:
             print(f"  ✗ RAG Exception: {e}")
+            return f"nmap -sV {target}"
+    
+    async def _generate_finetuning_command(self, query: str, target: str) -> str:
+        """Generate command using Fine-Tuning"""
+        try:
+            client = FineTuningClient(finetuning_url=FINETUNING_URL)
+            result = await client.generate_command(query=query, target=target)
+            
+            if result.get('status') == 'success':
+                command = result.get('command')
+                print(f"  {GREEN}[FineTuning] ✅ {command}{RESET}")
+                return self._ensure_target_in_command(command, target)
+            else:
+                print(f"  ✗ FineTuning Error: {result.get('error')}")
+                return None
+        except Exception as e:
+            print(f"  ✗ FineTuning Exception: {e}")
             return f"nmap -sV {target}"
     
     async def _generate_diffusion_command(self, query: str, target: str) -> str:
