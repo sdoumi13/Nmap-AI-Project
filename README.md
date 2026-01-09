@@ -35,11 +35,6 @@ python agent5_validation/mcp_tools/mcp_server.py
 - Prêt pour entraînement de modèles seq2seq
 - Niveaux de complexité 1-10
 
-<<<<<<< HEAD
-##  Fonctionnement
-=======
-## Fonctionnement
->>>>>>> b788b47490d84202b2ece0f2883cc667e4a8180d
 
 1. **Comprehension Agent** : Analyse la requête avec TF-IDF + SBERT sur le corpus RAG
 2. **Complexity Agent** : Classifie en Easy/Medium/Hard selon les patterns détectés
