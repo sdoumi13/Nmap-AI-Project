@@ -21,7 +21,7 @@ class DistributedRAGClient:
     Handles communication with 192.168.1.218:8000
     """
     
-    def __init__(self, rag_url: str = "http://192.168.1.218:8000"):
+    def __init__(self, rag_url: str = "http://192.168.1.141:8000"):
         self.base_url = rag_url
         self.client = httpx.AsyncClient(timeout=60.0)
         self.colleague_ip = "192.168.1.218"
@@ -99,7 +99,7 @@ class FineTuningClient:
     Handles medium complexity command generation via ngrok endpoint
     """
     
-    def __init__(self, finetuning_url: str = "https://fa4b211dce60.ngrok-free.app"):
+    def __init__(self, finetuning_url: str = "https://82c0264a817e.ngrok-free.app"):
         self.base_url = finetuning_url
         self.client = httpx.AsyncClient(timeout=60.0, verify=False)  # Disable SSL verification for ngrok
     
@@ -211,8 +211,8 @@ class DistributedRouter:
     """
     
     def __init__(self, 
-                 rag_colleague_url: str = "http://192.168.1.218:8000",
-                 finetuning_url: str = "https://fa4b211dce60.ngrok-free.app",
+                 rag_colleague_url: str = "http://192.168.1.141:8000",
+                 finetuning_url: str = "https://82c0264a817e.ngrok-free.app",
                  diffusion_local_url: str = "http://192.168.1.169:9000"):
         
         self.rag_colleague = DistributedRAGClient(rag_colleague_url)

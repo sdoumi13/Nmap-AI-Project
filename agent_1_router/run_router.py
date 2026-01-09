@@ -32,8 +32,8 @@ except ImportError:
     HYBRID_VALIDATOR_AVAILABLE = False
 
 # Configuration
-COLLEAGUE_RAG_URL = "http://192.168.1.218:8000"
-FINETUNING_URL = "https://fa4b211dce60.ngrok-free.app"
+COLLEAGUE_RAG_URL = "http://192.168.1.141:8000"
+FINETUNING_URL = "https://82c0264a817e.ngrok-free.app"
 MCP_AGENT5_URL = "http://localhost:5002"
 
 # Colors
