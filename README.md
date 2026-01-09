@@ -609,30 +609,7 @@ API Client : Fetch / Axios
 
 📁 Structure du Projet
 
-frontend/
-├── node_modules/          # Dépendances npm
-├── public/                # Assets statiques
-├── src/
-│   ├── assets/            # Images, icônes, etc.
-│   ├── components/        # Composants React réutilisables
-│   │   ├── Layout.tsx
-│   │   └── RobotPipeline.tsx
-│   ├── pages/             # Pages principales
-│   │   ├── Dashboard.tsx
-│   │   └── RouterPage.tsx
-│   ├── services/          # Services API
-│   │   └── api.ts         # Client Router Agent
-│   ├── App.tsx            # Composant racine
-│   ├── App.css            # Styles globaux
-│   ├── main.tsx           # Point d’entrée
-│   └── index.css          # Styles de base
-├── .eslintrc.js
-├── eslint.config.js
-├── .gitignore
-├── index.html
-├── package.json
-├── package-lock.json
-└── tsconfig.json
+<img width="630" height="778" alt="image" src="https://github.com/user-attachments/assets/1eaa2353-0707-4e2a-86af-3b5e30bf6c6f" />
 
 Fonctionnalités Principales
 1️⃣ Dashboard (Dashboard.tsx)
