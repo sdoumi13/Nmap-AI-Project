@@ -2,11 +2,11 @@
 
 ## Team Members
 
-- **Role 1:** DOUMI SALMA — Complexity Agent & Validation (MCP) Agent  
-- **Role 2:** —  
-- **Role 3:** —  
-- **Role 4:** —  
-- **Role 5:** —  
+- **Role 1:** DOUMI SALMA — Complexity Agent & Validation (MCP) Agent
+- **Role 2:** — AFROUKH ABDELLAH \_ Nmap Discrete Diffusion Agent
+- **Role 3:** —
+- **Role 4:** —
+- **Role 5:** —
 
 ---
 
@@ -25,45 +25,43 @@ pip install -r requirements.txt
 # chackend Lancement
 python agent_1_router/run_router.py
 python agent5_validation/run_agent5.py
-python agent5_validation/mcp_tools/mcp_server.py 
+python agent5_validation/mcp_tools/mcp_server.py
 
 ```
 
-#  Agent 1 - Router Agent
-
+# Agent 1 - Router Agent
 
 > **Intelligent Orchestrator of the Nmap-AI Multi-Agent System**  
-Analyzes, classifies, and routes user queries to the appropriate agent with full validation.
+> Analyzes, classifies, and routes user queries to the appropriate agent with full validation.
 
 ---
 
-##  Global Workflow
+## Global Workflow
 
 User Query → Comprehension → Complexity → Routing → MCP Execution
 
-
 ### Rôle Principal
 
-| Étape | Fonction | Objectif |
-|-------|----------|----------|
-| **1. Comprehension** | Filtre les requêtes | Rejeter le bruit non-Nmap |
-| **2. Complexity** | Classifie la difficulté | Easy / Medium / Hard |
-| **3. Routing** | Sélectionne l'agent | RAG (simple) ou Diffusion (complexe) |
-| **4. Execution** | Envoie à Agent 5 | Validation + Correction + Sandbox + VM |
+| Étape                | Fonction                | Objectif                               |
+| -------------------- | ----------------------- | -------------------------------------- |
+| **1. Comprehension** | Filtre les requêtes     | Rejeter le bruit non-Nmap              |
+| **2. Complexity**    | Classifie la difficulté | Easy / Medium / Hard                   |
+| **3. Routing**       | Sélectionne l'agent     | RAG (simple) ou Diffusion (complexe)   |
+| **4. Execution**     | Envoie à Agent 5        | Validation + Correction + Sandbox + VM |
 
 ---
 
-##  Architecture
+## Architecture
 
 ### Structure des Fichiers
 
 ```
 agent_1_router/
 ├── __init__.py
-├── comprehension.py         
-├── complexity.py             
-├── distributed_routing.py    
-└── run_router.py            
+├── comprehension.py
+├── complexity.py
+├── distributed_routing.py
+└── run_router.py
 ```
 
 ---
@@ -125,9 +123,9 @@ agent_1_router/
 
 ---
 
-##  Modules Détaillés
+## Modules Détaillés
 
-### 1. `comprehension.py` 
+### 1. `comprehension.py`
 
 **Objectif :** Déterminer si la requête est pertinente pour Nmap (filtre anti-bruit)
 
@@ -170,7 +168,6 @@ agent_1_router/
 - **Nmap Corpus** : `datasets/rag_corpus_detailed.json`
   - 150+ exemples de requêtes Nmap valides
   - Tags : intent, context, command, use_cases, related_concepts
-  
 - **Noise Corpus** : Hardcoded examples
   - Requêtes non-Nmap : météo, recettes, programmation générale, etc.
 
@@ -178,7 +175,7 @@ agent_1_router/
 
 ---
 
-### 2. `complexity.py` 
+### 2. `complexity.py`
 
 **Objectif :** Classifier la complexité de la requête (Easy / Medium / Hard)
 
@@ -217,14 +214,17 @@ agent_1_router/
 │  Final Level: argmax(votes)                              │
 └──────────────────────────────────────────────────────────┘
 ```
+
 ![Comprehension](/Annexe//image1.png)
 
 #### Corpus Utilisés
 
 1. **RAG Corpus** (`rag_corpus_detailed.json`)
+
    - Exemples avec field `difficulty: easy|medium|hard`
 
 2. **Diffusion Corpus** (`diffusion_corpus_detailed.json`)
+
    - Exemples avec field `complexity_level: 1-10`
    - Mapping : ≤3=Easy, 4-6=Medium, >6=Hard
 
@@ -233,7 +233,7 @@ agent_1_router/
 
 ---
 
-### 3. `distributed_routing.py` 
+### 3. `distributed_routing.py`
 
 **Objectif :** Communiquer avec les agents distribués (RAG et Diffusion)
 
@@ -269,7 +269,7 @@ agent_1_router/
 └─────────────────────────────────────────────────────┘
 ```
 
-### 4. `run_router.py` 
+### 4. `run_router.py`
 
 **Objectif :** Orchestrateur principal exposant une API REST (FastAPI)
 
@@ -300,7 +300,7 @@ agent_1_router/
 
 ---
 
-##  Installation & Configuration
+## Installation & Configuration
 
 ### Prérequis Système
 
@@ -310,7 +310,7 @@ agent_1_router/
 
 ### 1. Installation des Dépendances
 
-```bash
+````bash
 # Créer environnement virtuel
 python -m venv venv
 venv\Scripts\activate  # Windows
@@ -324,18 +324,20 @@ pip install requirements.txt
 
 **`distributed_routing.py` :**
 ```python
-COLLEAGUE_RAG_URL = "http://192.168.1.218:8000"  
-DIFFUSION_LOCAL_URL = "http://192.168.1.169:9000"  
-```
+COLLEAGUE_RAG_URL = "http://192.168.1.218:8000"
+DIFFUSION_LOCAL_URL = "http://192.168.1.169:9000"
+````
 
 **`comprehension.py` & `complexity.py` :**
+
 ```python
-SLM_API_URL = "http://192.168.11.1:1234/v1/chat/completions"  
+SLM_API_URL = "http://192.168.11.1:1234/v1/chat/completions"
 ```
 
 **`run_router.py` :**
+
 ```python
-MCP_AGENT5_URL = "http://localhost:5002" 
+MCP_AGENT5_URL = "http://localhost:5002"
 ```
 
 ### 3. Vérification des Services
@@ -376,8 +378,216 @@ python run_router.py
 
 ---
 
+## APP- Router Example
 
-
-## APP- Router Example 
 ![LLM](/Annexe/1.png)
 ![LLM](/Annexe/2.png)
+
+---
+
+# Nmap Discrete Diffusion Agent
+
+## Overview
+
+AI-powered system that generates Nmap commands from natural language using **discrete diffusion** - iteratively refining commands from noisy states to valid Nmap syntax.
+
+**Key Features**: T5-based (60M params), semantic-aware noise generation, FastAPI server, 4638 training commands
+
+---
+
+## Architecture
+
+### Model: T5-Small + Discrete Diffusion
+
+- **Base**: T5ForConditionalGeneration (6 encoder/decoder layers, 512 hidden dim)
+- **Diffusion**: Progressive denoising: `nmap` → `+scan` → `+ports` → `+flags` → `complete`
+- **Input**: `"refine: {noisy_cmd} | query: {nl_query}"`
+- **Output**: Next refined command
+
+### Workflow
+
+```
+Training:  Clean Command → Noise Generator → Training Pairs (noisy→clean) → T5 Training
+Inference: NL Query → Intent Extraction → Iterative Refinement (max 15 steps) → Final Command
+```
+
+### Core Components
+
+- **NmapNoiseGenerator**: Creates 7-level semantic noise sequences
+- **NmapDiscreteDiffusionLM**: T5 wrapper with command validation
+- **DiscreteDiffusionSampler**: Iterative refinement engine
+- **DiffusionTrainer**: Training loop with checkpointing
+
+---
+
+## Discrete Diffusion Approach
+
+### Forward Process: Semantic Noise Generation
+
+Unlike standard diffusion that adds random Gaussian noise, we use **semantic degradation** that preserves command structure while progressively removing components.
+
+**Noise Categories** (in semantic order):
+
+1. **Scan Type** (`-sS`, `-sT`, `-sU`) - Core scanning method
+2. **Port Specification** (`-p 80,443`, `-p-`, `-F`) - What to scan
+3. **OS/Version Detection** (`-O`, `-sV`, `-A`) - Deep inspection
+4. **Scripts** (`--script vuln`, `--script default`) - Advanced functionality
+5. **Timing** (`-T0` to `-T5`) - Speed control
+6. **Other Flags** (`-Pn`, `--traceroute`, `-D`) - Special options
+
+**Example Noise Sequence**:
+
+```
+t=0: nmap
+t=1: nmap -sS 192.168.1.0/24
+t=2: nmap -sS -p 80,443 192.168.1.0/24
+t=3: nmap -sS -p 80,443 -sV 192.168.1.0/24
+t=4: nmap -sS -p 80,443 -sV --script vuln 192.168.1.0/24  [CLEAN]
+```
+
+**Key Insight**: Each step is a valid (though incomplete) Nmap command, creating meaningful training signals.
+
+### Reverse Process: Iterative Denoising
+
+The model learns `p(x_{t-1} | x_t, query)` - predicting the less noisy command given:
+
+- Current noisy state `x_t`
+- Natural language query (condition)
+
+**Training Objective**:
+
+```
+L = -log p_θ(x_{t-1} | x_t, query)
+  = CrossEntropy(model(x_t, query), x_{t-1})
+```
+
+Each training pair `(x_t, x_{t-1})` teaches the model to:
+
+1. **Add missing flags** based on query intent
+2. **Maintain correct syntax** and flag ordering
+3. **Respect semantic constraints** (e.g., don't mix conflicting scan types)
+4. **Preserve existing flags** from previous step
+
+### Inference Algorithm
+
+```python
+def sample(query, max_steps=15):
+    # Extract intent: which flags are allowed?
+    allowed_flags = extract_intent(query)  # e.g., {'-sS', '-p 80,443', '-sV'}
+    target = extract_target(query)          # e.g., '192.168.1.0/24'
+
+    x = "nmap"  # Start from maximum noise
+
+    for t in range(max_steps):
+        # Model predicts next refinement
+        x_next = model.generate("refine: " + x + " | query: " + query)
+
+        # Enforce semantic constraints
+        x_next = keep_only_allowed_flags(x_next, allowed_flags)
+        x_next = add_target_if_missing(x_next, target)
+
+        # Check convergence
+        if converged(x, x_next):
+            break
+
+        x = x_next
+
+    return x
+```
+
+**Convergence Criteria**:
+
+- Exact string match: `x_t == x_{t-1}`
+- Minimal change: ≤1 token difference
+- Degradation detection: fewer flags than previous step
+
+### Intent-Based Constraint Enforcement
+
+To prevent hallucination, we extract constraints from the natural language query:
+
+**Query**: "Stealth SYN scan on ports 80,443 with version detection on 192.168.1.0/24"
+
+**Extracted Constraints**:
+
+```python
+{
+    'scan_type': ['-sS'],              # "stealth" → SYN scan
+    'ports': ['-p 80,443'],            # explicit ports
+    'os_version': ['-sV'],             # "version detection"
+    'target': '192.168.1.0/24'
+}
+```
+
+**Enforcement**: After each model prediction, remove any flags not in allowed set and ensure target is present.
+
+### Training Data Generation
+
+From 4,638 clean commands, we generate **~32,000 training pairs**:
+
+```python
+for clean_command in dataset:
+    sequence = generate_noise_sequence(clean_command)  # 7 steps
+    # sequence = ["nmap", "nmap -sS target", ..., clean_command]
+
+    for i in range(len(sequence) - 1):
+        training_pairs.append({
+            'input': f"refine: {sequence[i]} | query: {nl_query}",
+            'target': sequence[i+1]
+        })
+```
+
+**Data Augmentation**: Paraphrase queries ("Scan" → "Check", "Run" → "Execute") for +33% more data.
+
+---
+
+## Example Generation Trace
+
+**Query**: "Scan all ports with OS detection on 192.168.1.0/24"
+
+```
+Step 0: nmap
+  ↓ [Model adds scan type based on default]
+Step 1: nmap 192.168.1.0/24
+  ↓ [Model adds port specification from "all ports"]
+Step 2: nmap -p- 192.168.1.0/24
+  ↓ [Model adds OS detection from query]
+Step 3: nmap -p- -O 192.168.1.0/24
+  ↓ [Converged: no change]
+
+Final: nmap -p- -O 192.168.1.0/24
+```
+
+**Why Diffusion Works Here**:
+
+1. **Structured Output**: Commands have clear syntax rules - easier to learn incrementally
+2. **Semantic Hierarchy**: Flags have natural ordering (scan → ports → detection)
+3. **Error Correction**: Each step can fix mistakes from previous step
+4. **Generalization**: Model learns flag relationships, not just memorization
+
+---
+
+## Running the System
+
+```bash
+# Train: python discrete_diffusion_nmap.py --mode train --epochs 20
+# Inference: python discrete_diffusion_nmap.py --mode inference
+# API: python agent_api_server.py
+```
+
+## Files
+
+- **discrete_diffusion_nmap.py**: Main training/inference script
+- **agent_api_server.py**: FastAPI REST endpoint
+- **nmap_commands.json**: 4638 training examples
+- **nmap_diffusion_checkpoint/**: Trained model (60M params)
+
+---
+
+## Performance
+
+| Metric                | Value  |
+| --------------------- | ------ |
+| Training Loss         | 0.124  |
+| Validation Loss       | 0.098  |
+| Inference Time (GPU)  | ~200ms |
+| Avg Convergence Steps | 3-5    |
