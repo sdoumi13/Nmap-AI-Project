@@ -1,9 +1,20 @@
-# Nmap-AI-Project
+# Nmap-AI Project
 
-"""
-##
+## Team Members
 
-# Nmap AI Project - 
+- **Role 1:** DOUMI SALMA — Complexity Agent & Validation (MCP) Agent  
+- **Role 2:** —  
+- **Role 3:** —  
+- **Role 4:** —  
+- **Role 5:** —  
+
+---
+
+## Project Overview
+
+The **Nmap-AI Project** is an intelligent multi-agent system designed to understand, classify, generate, and safely execute **Nmap commands** using AI techniques (RAG,Fine-Tunnig, Diffusion models, and SLMs).
+
+At the core of the system is **Agent 1 – Router Agent**, which acts as the brain of the architecture.
 
 ## Installation
 
@@ -14,28 +25,23 @@ pip install -r requirements.txt
 # chackend Lancement
 python agent_1_router/run_router.py
 python agent5_validation/run_agent5.py
-python agent5_validation/mcp_tools/mcp_server.py   
+python agent5_validation/mcp_tools/mcp_server.py 
+
 ```
 ## DOUMI SALMA 
 
 #  Agent 1 - Router Agent
 
-> **Orchestrateur Intelligent du Système Multi-Agents Nmap-AI**  
-> Analyse, classifie et route les requêtes vers l'agent approprié avec validation complète
+
+> **Intelligent Orchestrator of the Nmap-AI Multi-Agent System**  
+Analyzes, classifies, and routes user queries to the appropriate agent with full validation.
 
 ---
 
-##  Vue d'ensemble
+##  Global Workflow
 
-L'**Agent 1 (Router)** est le cerveau central du système Nmap-AI. Il effectue quatre tâches critiques :
+User Query → Comprehension → Complexity → Routing → MCP Execution
 
-```
-┌────────────────────────────────────────────────────────────┐
-│                    AGENT 1 - ROUTER                        │
-│                                                            │
-│  User Query → Comprehension → Complexity → Route → MCP    │
-└────────────────────────────────────────────────────────────┘
-```
 
 ### Rôle Principal
 
@@ -169,42 +175,7 @@ agent_1_router/
 - **Noise Corpus** : Hardcoded examples
   - Requêtes non-Nmap : météo, recettes, programmation générale, etc.
 
-![Noise](/Annexe//image2.png)
-
-#### Exemple de Traitement
-
-**Input :** `"Lance un scan stealth et utilise le fragment de paquets pour evade le firewall"`
-
-**Output :**
-```python
-{
-  "relevant": True,
-  "score": 0.699,
-  "reason": "The query mentions stealth techniques and fragmenting packets...",
-  "layers": {
-    "tfidf_nmap": 0.221,
-    "tfidf_noise": 0.000,
-    "sbert_semantic": 0.343,
-    "slm_relevant": True,
-    "slm_confidence": 0.950
-  },
-  "extracted_intent": "Perform stealth SYN scan with packet fragmentation for firewall evasion"
-}
-```
-
-**Visualisation (voir Annexe/image1.png) :**
-
-```
-[Comprehension] Analyzing: 'Lance un scan stealth et utilise le fragment...'
-  [TF-IDF] Nmap: 0.221 | Noise: 0.000
-  [SBERT] Semantic: 0.343
-  [SLM] Related: True | Conf: 0.950
-  [BOOST] Critical keyword detected (+0.15)
-  [FINAL] Score: 0.699 | Threshold: 0.25 | Relevant: True
-
- VALID. Score: 0.70
-```
-![Comprehension](/Annexe//image1.png)
+![Noise](/Annexe//image3.png)
 
 ---
 
@@ -247,14 +218,7 @@ agent_1_router/
 │  Final Level: argmax(votes)                              │
 └──────────────────────────────────────────────────────────┘
 ```
-
-#### Critères de Classification
-
-| Niveau | Caractéristiques | Exemples de Commandes |
-|--------|------------------|----------------------|
-| **🟢 EASY** | • Scan basique<br>• 1-2 flags simples<br>• Pas d'évasion | `nmap -p- 192.168.1.0/24`<br>`nmap -sn 10.0.0.0/24` |
-| **🟡 MEDIUM** | • Détection OS/Service<br>• 3-5 flags<br>• Scripts NSE standards | `nmap -sV -O -p 22,80,443 target`<br>`nmap --script default target` |
-| **🔴 HARD** | • Techniques stealth<br>• Évasion IDS/Firewall<br>• NSE complexes<br>• Fragmentation, decoys | `nmap -sS -f -D RND:10 target`<br>`nmap --script brute target` |
+![Comprehension](/Annexe//image1.png)
 
 #### Corpus Utilisés
 
@@ -337,10 +301,9 @@ agent_1_router/
 
 #### Classe Principale
 
-
 ---
 
-## 🚀 Installation & Configuration
+##  Installation & Configuration
 
 ### Prérequis Système
 
@@ -415,7 +378,6 @@ python run_router.py
 ```
 
 ---
-
 
 
 
