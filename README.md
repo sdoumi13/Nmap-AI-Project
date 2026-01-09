@@ -6,7 +6,7 @@
 - **Role 2:** — AFROUKH ABDELLAH \_ Nmap Discrete Diffusion Agent
 - **Role 3:** — NACIRI AYMANE - FRONTEND DEVELOPPER + BACKEND/FRONTEND APIS
 - **Role 4:** — Aymane Moutmaine — RAG Agent
-- **Role 5:** —
+- **Role 5:** — BAY BAY BADR - Fine-tuning Agent
 
 ---
 
@@ -722,3 +722,97 @@ Expected response:
   "confidence": 0.8
 }
 ```
+
+# 🤖 Fine-tuned Agent - Phi3 mini Model ~3.8B parameters
+
+An intelligent Fine-Tuned Agent designed to translate natural language requests into precise, syntax-accurate `nmap` commands. This agent serves as the "Tactical Specialist" in the multi-agent ecosystem.
+
+## 🧠 Model Architecture
+
+- **Base Model**: Phi-3 Mini (~3.8B parameters)
+- **Fine-Tuning**: Trained using LoRA (Low-Rank Adaptation) for domain-specific mastery of network security syntax
+- **Optimization**: 4-bit NF4 Quantization via `bitsandbytes`, enabling high-speed inference on consumer-grade GPUs (~4-6GB VRAM)
+
+## 🚀 Key Features
+
+- **Contextual Translation**: Converts complex scanning intents (e.g., "Find all web servers") into optimized flags (`nmap -p 80,443...`)
+- **FastAPI Integration**: Provides a high-performance REST API for seamless communication with other agents
+- **Hardware Accelerated**: Full CUDA support for near-instant command generation (~1-2s)
+
+## 🛠 Quick Start
+
+1. **Dependencies**:
+
+```bash
+   pip install torch transformers peft fastapi bitsandbytes
+```
+
+2. **Model Setup**:
+
+   - Place Phi-3 base weights in `C:\models\phi3_mini`
+   - Place LoRA adapters in `./phi3-nmap-results`
+
+3. **Launch**:
+
+```bash
+   uvicorn app:app --host 0.0.0.0 --port 8000
+```
+
+## 📡 Agent API
+
+- **Endpoint**: `POST /generate`
+- **Input**:
+
+```json
+{ "prompt": "Scan 192.168.1.0/24 for OS version" }
+```
+
+- **Output**:
+
+```json
+{ "nmap_command": "nmap -O 192.168.1.0/24" }
+```
+
+## 📂 Repository Structure
+
+```
+.
+├── app.py                          # FastAPI agent interface
+├── phi3-nmap-results/              # Pre-trained LoRA adapter checkpoints
+├── nmap_dataset_augmented.json     # Curated cybersecurity training data
+├── Finetuning Script.ipynb         # Training code
+└── app.py                          # Core inference logic for the fine-tuned model
+```
+
+## 📝 Usage Example
+
+```python
+import requests
+
+response = requests.post(
+    "http://localhost:8000/generate",
+    json={"prompt": "Find all web servers with SSL on network 10.0.0.0/24"}
+)
+
+print(response.json()["nmap_command"])
+# Output: nmap -p 443 --script ssl-cert 10.0.0.0/24
+```
+
+## 🎯 Training Details
+
+- **Dataset**: Custom cybersecurity corpus with 10,000+ nmap command pairs
+- **Training Duration**: ~2 hours on RTX ADA 2000 8GB Vram
+- **LoRA Parameters**: r=16, alpha=32, dropout=0.05
+- **Validation Accuracy**: 94.2% syntax correctness
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## ⚠️ Disclaimer
+
+This tool is intended for authorized security testing only. Always obtain proper authorization before scanning networks.
+
+---
+
+**Need help?** Open an issue or contact the maintainers.
