@@ -44,8 +44,8 @@ class NmapRagAgent:
         self.embedding_function = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
         
         # 2. LLM Local (Ollama)
-        # Assure-toi d'avoir fait 'ollama run llama3' avant
-        self.llm = ChatOllama(model="llama3", temperature=0)
+        # Assure-toi d'avoir fait 'ollama run llama3:8b' avant
+        self.llm = ChatOllama(model="llama3:8b", temperature=0)
         
         self.vectorstore = self._initialize_vector_db()
         self.retriever = self.vectorstore.as_retriever(search_kwargs={"k": 3})

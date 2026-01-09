@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from RAG.agent.rag_agent import RAGAgent
+from agent.rag_agent import NmapRagAgent
 import uvicorn
 
 app = FastAPI(title="RAG API", description="RAG Agent API for Nmap command generation")
@@ -15,7 +15,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-rag = RAGAgent()
+rag = NmapRagAgent()
 
 
 class CommandRequest(BaseModel):
@@ -43,17 +43,30 @@ async def generate_command(request: CommandRequest):
     Returns: {"command": "nmap...", "intent": "...", "agent": "RAG", ...}
     """
     try:
-        # Generate command
-        result = rag.generate(request.query, request.target)
+        # Combine query and target into a single prompt
+        full_query = f"{request.query} on {request.target}" if request.target else request.query
+        
+        # Generate command using process() method which returns a dict
+        result = rag.process({
+            "user_query": full_query,
+            "extracted_ip": request.target
+        })
+        
+        if result.get("status") == "error":
+            raise HTTPException(status_code=500, detail=result.get("error_message", "Generation failed"))
+        
+        command = result.get("nmap_candidate", "")
         
         return CommandResponse(
             status="success",
-            command=result["command"],
-            intent=result["intent"],
+            command=command,
+            intent=request.query,
             target=request.target,
             agent="RAG",
-            confidence=result.get("confidence", 0.8)
+            confidence=0.8
         )
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
