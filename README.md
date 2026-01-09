@@ -46,7 +46,7 @@ User Query → Comprehension → Complexity → Routing → MCP Execution
 | -------------------- | ----------------------- | -------------------------------------- |
 | **1. Comprehension** | Filtre les requêtes     | Rejeter le bruit non-Nmap              |
 | **2. Complexity**    | Classifie la difficulté | Easy / Medium / Hard                   |
-| **3. Routing**       | Sélectionne l'agent     | RAG (simple) ou Diffusion (complexe)   |
+| **3. Routing**       | Sélectionne l'agent     | RAG (simple) /LoRA-fine-tuned T5-small-Phi-4 /Diffusion (complexe)   |
 | **4. Execution**     | Envoie à Agent 5        | Validation + Correction + Sandbox + VM |
 
 ---
@@ -92,7 +92,7 @@ agent_1_router/
 │ Corpus Similarity (30%) + Keywords (25%) + SLM (45%)       │
 │                                                             │
 │ 🟢 Easy    → RAG Agent                                      │
-│ 🟡 Medium  → Diffusion Agent                                │
+│ 🟡 Medium  → LoRA-fine-tuned T5-small / Phi-4 on                               │
 │ 🔴 Hard    → Diffusion Agent                                │
 └──────────────────┬──────────────────────────────────────────┘
                    │
