@@ -583,11 +583,187 @@ Final: nmap -p- -O 192.168.1.0/24
 
 ---
 
-## Performance
+Frontend - Nmap-AI Interface
+Overview
+Interface utilisateur React/TypeScript pour interagir avec le système multi-agents Nmap-AI. Fournit une expérience intuitive pour soumettre des requêtes en langage naturel et visualiser les résultats des scans Nmap.
+Technologies Stack
 
-| Metric                | Value  |
-| --------------------- | ------ |
-| Training Loss         | 0.124  |
-| Validation Loss       | 0.098  |
-| Inference Time (GPU)  | ~200ms |
-| Avg Convergence Steps | 3-5    |
+Framework: React 18+ avec Vite
+Langage: TypeScript
+Styling: CSS Modules / Tailwind CSS (selon votre choix)
+État: React Hooks (useState, useEffect, etc.)
+API Client: Fetch / Axios pour communication avec le backend
+
+Structure du Projet
+frontend/
+├── node_modules/          # Dépendances npm
+├── public/                # Assets statiques
+├── src/
+│   ├── assets/           # Images, icons, etc.
+│   ├── components/       # Composants React réutilisables
+│   │   ├── Layout.tsx
+│   │   └── RobotPipeline.tsx
+│   ├── pages/            # Pages de l'application
+│   │   ├── Dashboard.tsx
+│   │   └── RouterPage.tsx
+│   ├── services/         # Services API
+│   │   └── api.ts        # Client pour communiquer avec Router Agent
+│   ├── App.tsx           # Composant racine
+│   ├── App.css           # Styles globaux
+│   ├── main.tsx          # Point d'entrée
+│   └── index.css         # Styles de base
+├── .eslintrc.js          # Configuration ESLint
+├── eslint.config.js      # Configuration ESLint moderne
+├── .gitignore
+├── index.html            # Template HTML
+├── package.json          # Dépendances et scripts
+├── package-lock.json
+└── tsconfig.json         # Configuration TypeScript
+
+
+Fonctionnalités Principales
+1. Dashboard (Dashboard.tsx)
+
+Vue d'ensemble du système : Affiche l'état des agents (Router, RAG, Diffusion, MCP)
+Statistiques en temps réel : Nombre de requêtes traitées, taux de succès
+Historique des commandes : Liste des dernières commandes générées
+Graphiques de performance : Temps de réponse par agent
+
+2. Router Page (RouterPage.tsx)
+
+Interface de requête : Champ de saisie pour requêtes en langage naturel
+Pipeline visuel : Affiche le parcours de la requête à travers les agents
+
+Comprehension → Complexity → Routing → Generation → Validation
+
+
+Résultats détaillés :
+
+Commande Nmap générée
+Niveau de complexité détecté
+Agent utilisé (RAG / LoRA-T5 / Diffusion)
+Logs de validation MCP
+Résultats d'exécution
+
+
+
+3. Composants Réutilisables
+Layout.tsx
+Structure de base de l'application avec navigation et header.
+RobotPipeline.tsx
+Visualisation interactive du pipeline multi-agents avec états en temps réel.
+API Integration (services/api.ts)
+typescript// Communication avec le Router Agent (Port 8001)
+interface RouterRequest {
+  query: string;
+}
+
+interface RouterResponse {
+  comprehension: {
+    is_relevant: boolean;
+    confidence: number;
+  };
+  complexity: {
+    level: "easy" | "medium" | "hard";
+    confidence: number;
+  };
+  command: string;
+  agent_used: string;
+  validation: {
+    is_valid: boolean;
+    corrections: string[];
+    execution_result: string;
+  };
+}
+
+// Endpoint principal
+POST http://localhost:8001/route
+Installation et Démarrage
+Prérequis
+
+Node.js 18+
+npm ou yarn
+
+Installation
+bash# Naviguer vers le dossier frontend
+cd frontend
+
+# Installer les dépendances
+npm install
+Configuration
+Créer un fichier .env à la racine du frontend :
+envVITE_API_ROUTER_URL=http://localhost:8001
+VITE_API_RAG_URL=http://192.168.1.218:8000
+VITE_API_DIFFUSION_URL=http://192.168.1.169:9000
+VITE_API_MCP_URL=http://localhost:5002
+Lancement en développement
+bashnpm run dev
+# L'application démarre sur http://localhost:5173
+Build pour production
+bashnpm run build
+# Les fichiers optimisés sont générés dans dist/
+Workflow Utilisateur
+┌─────────────────────────────────────────────────────────┐
+│                   FRONTEND WORKFLOW                     │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  1. User Input                                          │
+│     ├─ Saisie requête NL : "Scan ports 80,443 on X"     │
+│     └─ Validation côté client (non-vide)                │
+│                                                         │
+│  2. Submit to Router                                    │
+│     ├─ POST /route avec query                           │
+│     └─ Loading state + indicateur visuel                │
+│                                                         │
+│  3. Pipeline Visualization                              │
+│     ├─ Comprehension : ✓ Relevant (score: 0.87)        |
+│     ├─ Complexity    : 🟡 Medium (confidence: 0.92)     │
+│     ├─ Routing       : → LoRA-T5 Agent                  │
+│     └─ Generation    : nmap -p 80,443 -sS X             │
+│                                                         │
+│  4. Validation Display                                  │
+│     ├─ Syntax Check  : ✓ Valid                          │
+│     ├─ LLM Judge     : ✓ Semantically correct           │
+│     ├─ Sandbox Test  : ✓ Safe                           |
+│     └─ Execution     : Display results                  │
+│                                                         │
+│  5. Results Presentation                                │
+│     ├─ Formatted command output                         │
+│     ├─ Download as JSON/TXT                             │
+│     └─ Add to history                                   │
+└─────────────────────────────────────────────────────────┘
+Gestion des États
+États principaux
+
+Query State : Requête utilisateur actuelle
+Loading State : Indicateurs de chargement par étape
+Pipeline State : État de chaque agent dans le pipeline
+Results State : Commandes générées et résultats d'exécution
+Error State : Gestion des erreurs API et validation
+
+Exemple de structure
+typescriptinterface AppState {
+  query: string;
+  isLoading: boolean;
+  currentStep: 'idle' | 'comprehension' | 'complexity' | 'routing' | 'generation' | 'validation' | 'complete';
+  result: RouterResponse | null;
+  error: string | null;
+  history: RouterResponse[];
+}
+Gestion des Erreurs
+
+Timeout : Afficher message si pas de réponse après 120s
+Network Error : Vérifier connexion et services backend
+Validation Failed : Afficher corrections suggérées
+404/500 Errors : Messages d'erreur clairs pour l'utilisateur
+
+
+Code Splitting : Lazy loading des pages avec React.lazy()
+Optimisation bundle : Vite build optimization
+Caching : Service Worker pour requêtes fréquentes
+Debouncing : Sur les inputs de recherche
+
+Architecture des composants
+Component Structure:
+├── Presentational Components (UI pur)
+└── Container Components (logique + API calls)
