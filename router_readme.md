@@ -1,23 +1,3 @@
-# Nmap-AI-Project
-
-"""
-##
-
-# Nmap AI Project - 
-
-## Installation
-
-```bash
-# Installer les dépendances
-pip install -r requirements.txt
-
-# chackend Lancement
-python agent_1_router/run_router.py
-python agent5_validation/run_agent5.py
-python agent5_validation/mcp_tools/mcp_server.py   
-```
-## DOUMI SALMA 
-
 #  Agent 1 - Router Agent
 
 > **Orchestrateur Intelligent du Système Multi-Agents Nmap-AI**  
@@ -120,7 +100,7 @@ agent_1_router/
 
 ---
 
-##  Modules Détaillés
+## 📦 Modules Détaillés
 
 ### 1. `comprehension.py` 
 
@@ -202,7 +182,7 @@ agent_1_router/
   [BOOST] Critical keyword detected (+0.15)
   [FINAL] Score: 0.699 | Threshold: 0.25 | Relevant: True
 
- VALID. Score: 0.70
+✅ VALID. Score: 0.70
 ```
 ![Comprehension](/Annexe//image1.png)
 
@@ -268,6 +248,11 @@ agent_1_router/
 3. **Finetuning Corpus** (`finetuning_corpus_detailed.json`)
    - Conversations annotées avec `difficulty`
 
+
+```
+
+```
+
 ---
 
 ### 3. `distributed_routing.py` 
@@ -306,7 +291,7 @@ agent_1_router/
 └─────────────────────────────────────────────────────┘
 ```
 
-### 4. `run_router.py` 
+### 4. `run_router.py` 🚀
 
 **Objectif :** Orchestrateur principal exposant une API REST (FastAPI)
 
@@ -417,8 +402,3 @@ python run_router.py
 ---
 
 
-
-
-## APP- Router Example 
-![LLM](/Annexe/1.png)
-![LLM](/Annexe/2.png)
